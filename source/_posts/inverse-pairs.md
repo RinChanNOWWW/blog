@@ -5,6 +5,7 @@ tags:
 	- 算法题
 	- 分治法
 	- 归并排序
+	- Python
 categories:
 	- 算法题
 ---
@@ -32,7 +33,7 @@ categories:
 代码实现：
 
 ```python
-def InversePairs(self, data):
+def InversePairs(data):
     # write code here
     def mergeSort(data, left, right):
         if left == right:
