@@ -19,7 +19,7 @@ categories:
 -  **小数点前可以什么都没有**。+.123 这种也算做数字，也可以添加正负号。
 -  **e/E 后面必须有数字**
 
-Python 没有 `switch` 那就把力 `if-else` 了。
+Python 没有 `switch` 那就暴力 `if-else` 了。（其实我想用 C++ 的，但用都用 Python 了就继续吧。
 
 ```python
 def isNumeric(s):
