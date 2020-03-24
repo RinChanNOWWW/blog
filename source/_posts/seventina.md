@@ -1,10 +1,11 @@
 ---
 title: 【初音ミク】セブンティーナ(Seventina)【はるまきごはん】
 date: 2018-11-13 18:41:27
-tags: Vocaloid
+tags: 
+	- Vocaloid
+	- 音乐
 categories: 
-- 音乐
-- Vocaloid
+	- 个人爱好
 ---
 
 Music & Words & Illust & Movie：はるまきごはん

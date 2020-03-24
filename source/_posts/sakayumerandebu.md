@@ -1,10 +1,11 @@
 ---
 title: 【GUMI】逆夢ランデヴー【なつめ千秋】
 date: 2018-11-11 19:30:51
-tags: Vocaloid
+tags: 
+	- Vocaloid 
+	- 音乐
 categories: 
-    - 音乐
-    - Vocaloid
+    - 个人爱好
 ---
 千秋大佬昨天投了第十首术力口曲子，还是一如即往的好听啊。
 曲／なつめ千秋 Twitter@cak_ntm  

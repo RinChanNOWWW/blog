@@ -3,8 +3,7 @@ title: AttackLab
 date: 2018-12-08 13:51:01
 tags: 实验报告
 categories:
-	- 学习
-	- 实验报告
+	- 课程学习
 ---
 # 实验环境
 1. macOS Mojave 10.14.1
