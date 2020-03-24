@@ -1,1 +1,1 @@
-[rinchannow.club](rinchannow.club:9427)
+[rinchannow.club](http://rinchannow.club:9427)
