@@ -5,13 +5,13 @@ tags:
 	- Vocaloid 
 	- 音乐
 categories: 
-    - 个人爱好
+    - 兴趣爱好
 ---
 千秋大佬昨天投了第十首术力口曲子，还是一如即往的好听啊。
 曲／なつめ千秋 Twitter@cak_ntm  
 Illust／おはぎ Twitter@ohagi_FAULHEIT 
 Movie／みず希 Twitter@mzk_i6
-<!--more-->
+
 
 <iframe width="800" height="600" src="//player.bilibili.com/player.html?aid=35691843&cid=62606121&page=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
 

@@ -5,11 +5,10 @@ tags:
 	- Vocaloid
 	- 音乐
 categories: 
-	- 个人爱好
+	- 兴趣爱好
 ---
 
 Music & Words & Illust & Movie：はるまきごはん
-<!--more-->
 
 <iframe width="800" height="600" src="//player.bilibili.com/player.html?aid=35851257&cid=62914103&page=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
 
