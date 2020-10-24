@@ -1,1 +1,1 @@
-[rinchannow.club](http://rinchannow.club:9427)
+[rinchannowww.github.io](rinchannowww.github.io)
