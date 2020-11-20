@@ -13,7 +13,7 @@ timezone: ''
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
-url: http://rinchannow.club
+url: https://rinchannowww.github.io/
 root: /
 # permalink: #:year/:month/:day/:title/
 permalink: :title/
@@ -122,5 +122,5 @@ theme: hexo-theme-matery
 ## Docs: https://hexo.io/docs/deployment.html
 deploy:
   type: git
-  repo: git@39.106.86.23:/var/repo/blog.git
-  branch: master
+  repo: https://github.com/RinChanNOWWW/rinchannowww.github.io
+  branch: gh-pages
