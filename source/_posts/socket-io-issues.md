@@ -14,3 +14,5 @@ categories:
 ## Reference
 
 https://github.com/googollee/go-socket.io/issues/242
+
+https://blog.csdn.net/yonggeit/article/details/102586637
