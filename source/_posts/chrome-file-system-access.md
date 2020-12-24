@@ -142,6 +142,116 @@ async function writeURLToFile(fileHandle, url) {
 
 **（原作者提醒：直到文件流关闭前修改都不会写入磁盘，可以通过调用 `close()` 或者等文件流自动关闭）**
 
+### 将文件句柄存入数据库
+
+文件句柄是可以序列化的，这意味着你可以将它们存入数据库中，或者调用 `postMessage()` 在相同的域（the same top-level origin）中传递它们。
+
+将文件句柄存入数据库意味着你可以存储状态，或者记录下用户在使用哪些文件。这让你可以拥有一个最近打开或编辑过的文件列表，或者可以提供打开最近使用的文件的功能等等。在这个文本编辑器中，我将用户最近打开的五个文件存了起来，让用户能够方便地重新选择这些文件。
+
+在不同会话（session）中文件地访问权限是不能持续存在的，所以你应该使用 `queryPermission()` 来检验用户是否允许对某文件的访问。如果没有，使用 `requestPermission()` 来重新请求。
+
+在上面这个文本编辑器中，我定义了一个 `verifyPermission()` 方法来检查用户是否已经授予了权限， 如果没有，就会请求。
+
+```javascript
+async function verifyPermission(fileHandle, readWrite) {
+  const options = {};
+  if (readWrite) {
+    options.mode = 'readwrite';
+  }
+  // Check if permission was already granted. If so, return true.
+  if ((await fileHandle.queryPermission(options)) === 'granted') {
+    return true;
+  }
+  // Request permission. If the user grants permission, return true.
+  if ((await fileHandle.requestPermission(options)) === 'granted') {
+    return true;
+  }
+  // The user didn't grant permission, so return false.
+  return false;
+}
+```
+
+通过在读请求时申请写权限，我减少了请求权限的次数：打开一个文件时用户只用允许一次，便可以同时授予应用读写权限。
+
+### 打开一个目录并列出其内容
+
+要列出目录下的所有文件，需要调用 [`showDirectoryPicker()` ](https://wicg.github.io/file-system-access/#api-showdirectorypicker)。用户在我呢见选择器中选择一个目录，然后会返回一个 [`FileSystemDirectoryHandle`](https://wicg.github.io/file-system-access/#api-filesystemdirectoryhandle)，这个句柄对象能让你列举并访问目录中的文件。
+
+```javascript
+const butDir = document.getElementById('butDirectory');
+butDir.addEventListener('click', async () => {
+  const dirHandle = await window.showDirectoryPicker();
+  for await (const entry of dirHandle.values()) {
+    console.log(entry.kind, entry.name);
+  }
+});
+```
+
+### 新建或者目录下的访问文件和文件夹
+
+通过目录的句柄，你可以通过使用 [`getFileHandle()`](https://wicg.github.io/file-system-access/#dom-filesystemdirectoryhandle-getfilehandle) 与 [`getDirectoryHandle()`](https://wicg.github.io/file-system-access/#dom-filesystemdirectoryhandle-getdirectoryhandle) 创建或者访问文件和文件夹。你可以通过传入一个额外的 `option` 对象，并带有一个布尔类型的 `create` 字段，来决定如果文件或文件夹不存在时是否创建一个新的。
+
+```javascript
+// In an existing directory, create a new directory named "My Documents".
+const newDirectoryHandle = await existingDirectoryHandle.getDirectoryHandle('My Documents', {
+  create: true,
+});
+// In this new directory, create a file named "My Notes.txt".
+const newFileHandle = await newDirectoryHandle.getFileHandle('My Notes.txt', { create: true });
+```
+
+### 解析目录中文件的路径
+
+当你正在处理目录下的文件或文件夹时，解析它们的路径会对你很有用。这个操作可以通过调用 [`resolve()`](https://wicg.github.io/file-system-access/#api-filesystemdirectoryhandle-resolve) 实现。被解析的文件可以是目录的直接子女或者间接子女。
+
+```javascript
+// Resolve the path of the previously created file called "My Notes.txt".
+const path = await newDirectoryHandle.resolve(newFileHandle);
+// `path` is now ["My Documents", "My Notes.txt"]
+```
+
+### 删除目录下的文件和文件夹
+
+如果你获取了访问一个目录的权限，那你就能够使用 [`removeEntry()`](https://wicg.github.io/file-system-access/#dom-filesystemdirectoryhandle-removeentry) 来删除它下面的文件与文件夹。删除文件夹时，你可以选择递归删除其所有子文件及其包含的文件。
+
+```javascript
+// Delete a file.
+await directoryHandle.removeEntry('Abandoned Masterplan.txt');
+// Recursively delete a folder.
+await directoryHandle.removeEntry('Old Stuff', { recursive: true });
+```
+
+### 集成拖放（Drag and drop）功能
+
+[HTML Drag and Drop interfaces](https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API) 让 Web 应用可以接受直接将文件拖放到网页中。在拖放操作中，拖拽文件或目录项将分别关联到文件或目录项的入口（entry）。当拖拽文件时，`DataTransferItem.getAsFileSystemHandle()` 方法会返回一个包含 `FileSystemFileHandle` 对象的 promise 对象，当拖拽目录时，一个包含 `FileSystemDirectoryHandle` 对象的 promise 对象。下面的代码展示了这一过程。注意，无论是文件还是目录， Drag and Drop interface 中的  [`DataTransferItem.kind`](https://developer.mozilla.org/en-US/docs/Web/API/DataTransferItem/kind) 都是 `"file"` ，然而文件系统访问 API 中的  [`FileSystemHandle.kind`](https://wicg.github.io/file-system-access/#dom-filesystemhandle-kind)  会区分为 `"file"` 和 `"direcotry"`。
+
+```javascript
+elem.addEventListener('dragover', (e) => {
+  // Prevent navigation.
+  e.preventDefault();
+});
+
+elem.addEventListener('drop', async (e) => {
+  // Prevent navigation.
+  e.preventDefault();
+  // Process all of the items.
+  for (const item of e.dataTransfer.items) {
+    // Careful: `kind` will be 'file' for both file
+    // _and_ directory entries.
+    if (item.kind === 'file') {
+      const entry = await item.getAsFileSystemHandle();
+      if (entry.kind === 'directory') {
+        handleDirectoryEntry(entry);
+      } else {
+        handleFileEntry(entry);
+      }
+    }
+  }
+});
+```
+
+
+
 未完待续。。。
 
 To be continued ...
