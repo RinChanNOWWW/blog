@@ -89,6 +89,16 @@ k8s-node1    Ready    <none>                 28m   v1.20.4
 k8s-node2    Ready    <none>                 28m   v1.20.4
 ```
 
+## 补充
+
+后来又发现每次恢复虚拟机的时候  `coredns` 的 pod 一直没法 Ready，查看日志发现是 dial 一直超时，目前还不知道原因是什么，解决办法是重启  `coredns` 的 Deployment：
+
+```bash
+kubectl rollout restart deployment coredns -n kube-system
+```
+
+不过这之后 kube-proxy 就没办法把所有来自集群外部的访问自动定向到相应的 Node 上了，这个也还不知道为什么。不过可以通过 Node 的 IP 地址访问部署到它上面的服务。我的网络使用的是 flannel，目前还没有仔细研究到底是哪里出了问题。
+
 ## 最后
 
 Kubernetes的理念就是构建一个长期运行的系统，所以我这种 reset 的方法其实也是不太可取的办法，然后就是一定不要改变集群中节点的 IP 地址，要不然会非常麻烦。我这也算是体验了一把运维人员的工作？
