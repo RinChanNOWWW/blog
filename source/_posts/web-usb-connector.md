@@ -9,6 +9,10 @@ categories:
 	- 编程学习
 ---
 
+使用 Chrome 浏览器连接 USB 设备的一些总结。
+
+<!-- more -->
+
 ## 项目地址
 
 [https://github.com/RinChanNOWWW/web_usb_connector](https://github.com/RinChanNOWWW/web_usb_connector)

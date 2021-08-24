@@ -1,0 +1,15 @@
+group1:
+  title: 友情链接
+  items:
+    - title: 董老师
+      avatar: http://ry.huaji.store/images/logo@2x.png
+      description: 董大师，嗯
+      url: http://ry.huaji.store/
+    - title: 滑稽仓库
+      avatar: https://www.huaji.store/favicon.ico
+      description: 董老师的滑稽仓库
+      url: https://www.huaji.store/
+    - title: JmPotato
+      avatar: http://i1.hdslb.com/bfs/face/12302d338e6442b3768041770b1e8e1a7fb39bc2.jpg_64x64.jpg
+      description: 土豆君的强大不用多说
+      url: https://ipotato.me/

@@ -10,6 +10,8 @@ categories:
 
 自从之前那段实习结束之后，我的日常开发就转变成了 Windows 10 + WSL2 的方式。刚开始的时候还觉得特爽，等新鲜感过去，这种模式成为常态之后， Windows 以及 WSL2 的各种毛病都逐渐涌现了出来。为了防止我之后再次遇到又变得一筹莫展，我将在这个文章里记录我使用 Windows 10 开发所遇到的各种问题（大概是会持续更新的……）。
 
+<!-- more -->
+
 ## Windows 侧端口被占用的问题
 
 ### 问题发现
@@ -74,7 +76,7 @@ net start winnat
 
 解决办法是到 **控制面板->硬件和声音->电源选项->系统设置** 里把 **启用快速启动** 取消勾选，然后重启电脑，然后就可以正常上网了，没错，就是这么简单……
 
-<img src="/images/develop-with-issues-on-windows/battery.png" style="zoom:67%;" />
+<img src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/develop-with-issues-on-windows/battery.png" style="zoom:67%;" />
 
 能找到这个解决办法的老哥真的是个神人……希望微软之后能修复这个 bug 吧……
 

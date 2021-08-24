@@ -1,6 +1,7 @@
 ---
-title: friends
-date: 2020-03-18 21:40:16
-type: "friends"
-layout: "friends"
+menu_id: about
+seo_title: 友情链接
+toc_title: 友链索引
 ---
+
+{% friends %}

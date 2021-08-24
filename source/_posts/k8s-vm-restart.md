@@ -8,6 +8,10 @@ categories:
 	- 问题解决
 ---
 
+毕设开发中使用 k8s 遇到的一些问题与解决办法。
+
+<!-- more -->
+
 ## 背景
 
 为了做毕设我用 VMware Workstation 创建了三台 Ubuntu Live Server 20.04.2 LTS 虚拟机来模拟一个三节点（Master * 1, Node * 2）的 k8s 集群，也成功地搭建了整个集群，然后我就将虚拟机挂机搁置了几天。当我重新打开三台虚拟机并在 master 上使用 `kubectl get nodes` 查看集群地时候，我发现两个 node 节点都处于 `Not Ready` 的状态，这明显不符合预期现象，于是我就把三台虚拟机都重启了（毕竟重启大法好），结果好家伙，这一重启什么都无了。

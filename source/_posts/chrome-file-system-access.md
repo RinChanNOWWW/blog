@@ -12,9 +12,11 @@ categories:
 
 ---
 
-## 原文章：https://web.dev/file-system-access/
+原文章：https://web.dev/file-system-access/
 
-原作者 Thomas Steiner（[@tomayac](https://twitter.com/tomayac)）已同意。
+原作者：Thomas Steiner（[@tomayac](https://twitter.com/tomayac)）已同意转载。
+
+<!-- more -->
 
 ## 什么是 File System Access API
 
@@ -27,6 +29,7 @@ File System Access API（[The File System Access API](https://wicg.github.io/fil
 ## 文章进度（原文中已经全部完成）
 
 前往 https://web.dev/file-system-access/#status 查看
+
 
 ## 使用 File System Access API
 

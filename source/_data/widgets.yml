@@ -1,0 +1,5 @@
+welcome:
+  layout: markdown
+  title: 你好
+  content:
+    - 这里是 RinChanNOW 的个人娱乐用站点

@@ -3,31 +3,34 @@
 ## Source: https://github.com/hexojs/hexo/
 
 # Site
-title: リンちゃんなうの部屋
-subtitle: 'リンちゃんなうの部屋'
+title: リン屋
+avatar: https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/profile/avatar.jpg
+subtitle: RinChanNOW's blog
 description: '遊び用ブログ'
 keywords:
 author: RinChanNOW
-language: zh-CN
+language: 
+  - zh-CN
+  - en
 timezone: ''
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
-url: https://rinchannowww.github.io/
+url: https://github.com/RinChanNOWWW
 root: /
 # permalink: #:year/:month/:day/:title/
 permalink: :title/
 permalink_defaults:
 pretty_urls:
-  trailing_index: true # Set to false to remove trailing 'index.html' from permalinks
+  trailing_index: false # Set to false to remove trailing 'index.html' from permalinks
   trailing_html: true # Set to false to remove trailing '.html' from permalinks
 
 # Directory
 source_dir: source
 public_dir: public
-tag_dir: tags
-archive_dir: archives
-category_dir: categories
+tag_dir: blog/tags
+archive_dir: blog/archives
+category_dir: blog/categories
 code_dir: downloads/code
 i18n_dir: :lang
 skip_render:
@@ -40,40 +43,29 @@ external_link:
   enable: true # Open external links in new tab
   field: site # Apply to the whole site
   exclude: ''
-filename_case: 0
+filename_case: 1 # 把文件名称转换为 (1) 小写或 (2) 大写	默认(0)
 render_drafts: false
-post_asset_folder: true
+post_asset_folder: false
 relative_link: false
-future: true
+future: false
 highlight:
-  enable: false
+  enable: true
   line_number: true
   auto_detect: false
-  tab_replace: ''
+  tab_replace: '    '
   wrap: true
   hljs: false
+prismjs:
+  enable: false
+  preprocess: true
+  line_number: true
+  tab_replace: '    '
 
 prism_plugin:
   mode: 'preprocess'    # realtime/preprocess
   theme: 'tomorrow'
   line_number: false    # default false
   custom_css:
-
-search:
-  path: search.xml
-  field: post
-
-permalink_pinyin:
-  enable: true
-  separator: '-' # default: '-'
-
-postInfo:
-  date: true
-  update: false
-  wordCount: false # 设置文章字数统计为 true.
-  totalCount: false # 设置站点文章总字数统计为 true.
-  min2read: false # 阅读时长.
-  readCount: false # 阅读次数.
 
 # Home page setting
 # path: Root path for your blogs index page. (default = '')
@@ -99,8 +91,8 @@ meta_generator: true
 ## http://momentjs.com/docs/#/displaying/format/
 date_format: YYYY-MM-DD
 time_format: HH:mm:ss
-## Use post's date for updated date unless set in front-matter
-use_date_for_updated: false
+## updated_option supports 'mtime', 'date', 'empty'
+updated_option: 'date'
 
 # Pagination
 ## Set per_page to 0 to disable pagination
@@ -116,7 +108,7 @@ ignore:
 # Extensions
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
-theme: hexo-theme-matery
+theme: stellar
 
 # Deployment
 ## Docs: https://hexo.io/docs/deployment.html

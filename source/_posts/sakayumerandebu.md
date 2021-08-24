@@ -7,7 +7,11 @@ tags:
 categories: 
     - 兴趣爱好
 ---
+
 千秋大佬昨天投了第十首术力口曲子，还是一如即往的好听啊。
+
+<!-- more -->
+
 曲／なつめ千秋 Twitter@cak_ntm  
 Illust／おはぎ Twitter@ohagi_FAULHEIT 
 Movie／みず希 Twitter@mzk_i6
@@ -18,11 +22,11 @@ Movie／みず希 Twitter@mzk_i6
 千秋虽然投稿不多，但是每首曲子都非常高。第一次被他圈粉是他在14年5月投稿的第四首曲子，用gumi调教的*センチメンタルな愛慕心* ，这首歌到现在也是我最喜欢的V+曲之一~~（单画pv也很好舔）~~，这首歌的调教真的是神了，甚至让我听着就有*恋に落ちた*的感觉，n站上也全是<font color=#FFB6C1>粉色弹幕</font>。
 有机会真想买一张千秋的碟（虽然没办法放）。
 
-# 链接
+## 链接
 - [b站赫总的授权搬运](https://www.bilibili.com/video/av35691843)
 - 本家：[nico](https://www.nicovideo.jp/watch/sm34149279)   [youtube](https://www.youtube.com/watch?v=WpsFD6fAMDU)
 
-# 歌词
+## 歌词
 まるで意味のないレジスタンス          
 正義も悪もないその誤魔化し 
 喋れば喋るほど嘘がバレてしまいそうで怖じ気付いてんだろう？ 
@@ -63,7 +67,7 @@ Movie／みず希 Twitter@mzk_i6
 
 安いプライドで邪魔しないでくれ
 
-# 翻译：
+## 翻译：
 翻译来自：[@弓野篤禎_うゆピギィ](https://space.bilibili.com/19813002/)
 逆夢ランデヴー：**反梦幽会**
 
@@ -107,7 +111,7 @@ Movie／みず希 Twitter@mzk_i6
 
 别拿那廉价的自尊心打扰我啊
 
-# 初音ミク Wiki
+## 初音ミク Wiki
 逆夢ランデヴー
 [https://www5.atwiki.jp/hmiku/pages/38524.html](https://www5.atwiki.jp/hmiku/pages/38524.html)
 这网站更的真快啊，是有机器人吗……

@@ -10,6 +10,8 @@ categories:
 
 Music & Words & Illust & Movie：はるまきごはん
 
+<!-- more -->
+
 <iframe width="800" height="600" src="//player.bilibili.com/player.html?aid=35851257&cid=62914103&page=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
 
 这首歌虽然半个月前就在外网投了，但昨天春卷饭才在b站投稿，不过竟然有官方中文字幕，好评呀！
@@ -18,12 +20,12 @@ Music & Words & Illust & Movie：はるまきごはん
 曾经有段时间我也很想自己用vocaloid编曲来着，但是我乐理几乎不懂23333。
 lmq~~(梦酱)~~很喜欢春卷饭来着，最近在狂吹春卷饭的上上个投稿。
 
-# 链接
+## 链接
 - [b站](https://www.bilibili.com/video/av35851257)
 - [nico](https://www.nicovideo.jp/watch/sm34093697)
 - [youtube](https://www.youtube.com/watch?v=uSX7jj4-NNE)
 
-# 歌词
+## 歌词
 
 
 間違ってばっかの私は
@@ -88,10 +90,10 @@ lmq~~(梦酱)~~很喜欢春卷饭来着，最近在狂吹春卷饭的上上个�
 間違ってばっかの私は
 
 
-# 翻译
+## 翻译
 b站官方投稿的字幕里有。~~没有现成的给我复制粘贴~~
 
-# Miku Wiki
+## Miku Wiki
 セブンティーナ
 [https://www5.atwiki.jp/hmiku/pages/38441.html](https://www5.atwiki.jp/hmiku/pages/38441.html)
 
