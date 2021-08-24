@@ -7,3 +7,5 @@ public/
 .deploy*/
 *.sh
 .github_token
+github-deploy-key
+github-deploy-key.pub
