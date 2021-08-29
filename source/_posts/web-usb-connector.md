@@ -6,7 +6,7 @@ tags:
 	- 学习
 	- Web USB
 categories:
-	- 编程学习
+	- 编程开发
 ---
 
 使用 Chrome 浏览器连接 USB 设备的一些总结。

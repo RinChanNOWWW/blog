@@ -8,7 +8,7 @@ tags:
 	- Chrome
 	- 文章翻译
 categories:
-	- 编程学习
+	- 编程开发
 
 ---
 
