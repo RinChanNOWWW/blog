@@ -1,23 +1,32 @@
 name: auto deploy # workflow name
 
 on:
-  [push] # 触发事件
-
+  push: 
+    branches:
+      - master
 jobs:
   build: # job1 id
     runs-on: ubuntu-latest # 运行环境为最新版 Ubuntu
     name: auto deploy
     steps:
     - name: Checkout # step1 获取源码
-      uses: actions/checkout@v1 # 使用 actions/checkout@v1
+      uses: actions/checkout@v2 # 使用 actions/checkout@v2
       with: # 条件
         submodules: true # Checkout private submodules(themes or something else). 当有子模块时切换分支？
     - name: Setup Node.js 14.x
       uses: actions/setup-node@master
       with:
         node-version: "14.x"
+    - name: Cache NPM dependencies
+      uses: actions/cache@v2
+      with:
+        path: node_modules
+        key: ${{ runner.OS }}-npm-cache
+        restore-keys: |
+          ${{ runner.OS }}-npm-cache
     - name: Generate Public Files
       run: |
+        ls source/_posts
         npm i
         npm install hexo-cli -g
         hexo clean && hexo generate
