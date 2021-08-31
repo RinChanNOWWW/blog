@@ -12,11 +12,17 @@ categories:
 
 <!-- more -->
 
+## 2021-8-31
+
+### 发布 v0.1.0 版本
+
+今天为 ruborute 打了 v0.1.0 的 tag。并创建了 Github Actions 实现持续集成（CD）。当发布 tag 时会自动发布 Releases 并上传此 tag 的 build target。一开始本来像给可执行文件 ruborute.exe 打个压缩包的，但是暂时还没搞明白在 Github Actions 的 Windows 环境中该怎么打压缩包，应该是要先安装打包软件，但是我没找到合适的。所以就直接上传可执行文件到 Releases 了。
+
 ## 2021-8-30
 
 ### 实现歌曲 Volforce 的计算
 
-根据 BEMANIWIKI 上记载的[六代 VF 计算公式](http://bemaniwiki.com/index.php?SOUND%20VOLTEX%20EXCEED%20GEAR/VOLFORCE#calc)计算出每首歌的 VF，然后再求 VF 最高的 50 个记录的平均值。由于 Rust 的 `f64` 浮点数类型的比较实现起来比较繁琐，我将所有 VF 值都乘 1000 以整数方式记下来，方便比较与计算。不过我按照这个算下来的 VF 总比游戏里的高 0.1 左右，之后还得看看是怎么回事。
+根据 BEMANIWIKI 上记载的[六代 VF 计算公式](http://bemaniwiki.com/index.php?SOUND%20VOLTEX%20EXCEED%20GEAR/VOLFORCE#calc)计算出每首歌的 VF，然后再求 VF 最高的 50 个记录的平均值。由于 Rust 的 `f64` 浮点数类型的比较实现起来比较繁琐，我将所有 VF 值都乘 1000 以整数方式记下来，方便比较与计算。不过我按照这个算下来的 VF 总比游戏里的高 0.01 左右，之后还得看看是怎么回事。
 
 ### 实现 Best 50 记录的查找
 
