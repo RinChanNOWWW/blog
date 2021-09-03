@@ -12,6 +12,14 @@ categories:
 
 <!-- more -->
 
+## 2021-9-3
+
+### 实现数据统计并发布 v0.1.1 版本
+
+这几天为 ruborute 实现了一个 `count` 指令，用途是统计每一个 level 的 S、AAA+、AAA、PUC、PUC、HC、NC 的数量，以及这个 level 的总歌曲数。写这个的时候唯一的感想就是，Rust 的 match 竟然没有其他语言 switch case 中的 fallthrough 语义。然后统计 level 数量是利用迭代器 trait 中的 `filter().count()` 来计数，感觉可以在这个基础上做一个类似于 Python 中 pandas 那样的库啊（可能已经有了）。
+
+之后想把 ruborute 上传到 crates.io 以及类似于 Chocolatey 这样的 Windows 包管理平台上，然后上传个 docs.rs 啥的，那还得完善一下注释才行。。。瞬间感受到开源工作者们的伟大，要做出一个高可用的开源软件出来要做的事情也太多了。
+
 ## 2021-8-31
 
 ### 发布 v0.1.0 版本
