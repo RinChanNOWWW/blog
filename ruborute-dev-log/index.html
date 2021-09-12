@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+
+<head>
+  <meta name="generator" content="Hexo 5.4.0">
+  <meta charset="utf-8">
+  
+
+  <meta http-equiv='x-dns-prefetch-control' content='on' />
+  <link rel='dns-prefetch' href='https://cdn.jsdelivr.net'>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+  <meta name="renderer" content="webkit">
+  <meta name="force-rendering" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  <meta name="HandheldFriendly" content="True" >
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#f8f8f8">
+  <title>ruborute 开发日志 - リン屋</title>
+
+  
+    <meta name="description" content="作为一个 SDVX 玩家，有一天在水群的时候看到了一位群友发了一下自己做的统计得分数据的脚本，于是催生了自己做一个查分器的想法。于是就有了 ruborute 这个项目。它的读音为 “Are you 暴龍天(ぼるて, borute)?”。我打算用这个文章来记录我在开发过程中思路。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ruborute 开发日志">
+<meta property="og:url" content="https://github.com/RinChanNOWWW/ruborute-dev-log/">
+<meta property="og:site_name" content="リン屋">
+<meta property="og:description" content="作为一个 SDVX 玩家，有一天在水群的时候看到了一位群友发了一下自己做的统计得分数据的脚本，于是催生了自己做一个查分器的想法。于是就有了 ruborute 这个项目。它的读音为 “Are you 暴龍天(ぼるて, borute)?”。我打算用这个文章来记录我在开发过程中思路。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-08-29T12:01:59.000Z">
+<meta property="article:modified_time" content="2021-08-29T12:01:59.000Z">
+<meta property="article:author" content="RinChanNOW">
+<meta property="article:tag" content="Rust">
+<meta property="article:tag" content="个人项目">
+<meta name="twitter:card" content="summary">
+  
+  
+
+  <!-- feed -->
+  
+
+  
+    
+<link rel="stylesheet" href="/css/main.css">
+
+  
+
+  
+
+  
+</head>
+
+<body>
+  
+
+
+  <div class='l_body' id='start'>
+    <aside class='l_left' layout='post'>
+    
+
+
+<header class="header">
+
+<div class="logo-wrap"><a class="avatar" href="/about/"><div class="bg" style="opacity:0;background-image:url(https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.2/avatar/round/rainbow64@3x.webp);"></div><img no-lazy class="avatar" src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/profile/avatar.jpg" onerror="javascript:this.classList.add('error');this.src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/image/2659360.svg';"></a><a class="title" href="/"><div class="main">リン屋</div><div class="sub cap">RinChanNOW's blog</div></a></div>
+<nav class="menu dis-select"><a class="nav-item active" href="/">博客</a><a class="nav-item" href="/about/">关于</a></nav></header>
+
+<div class="widgets">
+
+<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#2021-9-3"><span class="toc-text">2021-9-3</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E6%95%B0%E6%8D%AE%E7%BB%9F%E8%AE%A1%E5%B9%B6%E5%8F%91%E5%B8%83-v0-1-1-%E7%89%88%E6%9C%AC"><span class="toc-text">实现数据统计并发布 v0.1.1 版本</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2021-8-31"><span class="toc-text">2021-8-31</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8F%91%E5%B8%83-v0-1-0-%E7%89%88%E6%9C%AC"><span class="toc-text">发布 v0.1.0 版本</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2021-8-30"><span class="toc-text">2021-8-30</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E6%AD%8C%E6%9B%B2-Volforce-%E7%9A%84%E8%AE%A1%E7%AE%97"><span class="toc-text">实现歌曲 Volforce 的计算</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0-Best-50-%E8%AE%B0%E5%BD%95%E7%9A%84%E6%9F%A5%E6%89%BE"><span class="toc-text">实现 Best 50 记录的查找</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BF%AE%E5%A4%8D%E5%8F%AF%E8%83%BD%E5%87%BA%E7%8E%B0%E9%87%8D%E5%A4%8D%E8%AE%B0%E5%BD%95%E7%9A%84-BUG"><span class="toc-text">修复可能出现重复记录的 BUG</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2021-8-28"><span class="toc-text">2021-8-28</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E9%80%9A%E8%BF%87%E6%AD%8C%E6%9B%B2%E5%90%8D%E6%9F%A5%E6%89%BE%E6%B8%B8%E7%8E%A9%E8%AE%B0%E5%BD%95"><span class="toc-text">实现通过歌曲名查找游玩记录</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9C%A8%E5%90%AF%E5%8A%A8%E6%97%B6%E7%BB%84%E5%90%88%E5%AE%8C%E6%95%B4%E4%BF%A1%E6%81%AF"><span class="toc-text">在启动时组合完整信息</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2021-8-27"><span class="toc-text">2021-8-27</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BC%95%E5%85%A5-music-db-xml-%E7%9A%84%E9%9F%B3%E4%B9%90%E4%BF%A1%E6%81%AF"><span class="toc-text">引入 music_db.xml 的音乐信息</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BC%98%E5%8C%96-Cmdline-%E6%A8%A1%E5%9D%97"><span class="toc-text">优化 Cmdline 模块</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%94%B9%E9%80%A0%E6%AD%8C%E6%9B%B2%E8%AE%B0%E5%BD%95%E9%80%BB%E8%BE%91"><span class="toc-text">改造歌曲记录逻辑</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2021-8-26"><span class="toc-text">2021-8-26</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%A1%AE%E5%AE%9A%E6%8A%80%E6%9C%AF%E8%B7%AF%E7%BA%BF"><span class="toc-text">确定技术路线</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%A1%AE%E5%AE%9A%E8%A6%81%E4%BD%BF%E7%94%A8%E7%9A%84%E5%BC%80%E6%BA%90%E5%BA%93"><span class="toc-text">确定要使用的开源库</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E9%80%9A%E8%BF%87%E9%9F%B3%E4%B9%90-id-%E6%9F%A5%E6%89%BE%E6%B8%B8%E7%8E%A9%E8%AE%B0%E5%BD%95"><span class="toc-text">实现通过音乐 id 查找游玩记录</span></a></li></ol></li></ol></div></div></div>
+
+
+</div>
+
+
+    </aside>
+    <div class='l_main'>
+      
+
+      
+
+
+<div class="bread-nav fs12"><div id="breadcrumb"><a class="cap breadcrumb" href="/">主页</a><span class="sep"></span><a class="cap breadcrumb" href="/">文章</a><span class="sep"></span><a class="cap breadcrumb-link" href="/blog/categories/%E7%BC%96%E7%A8%8B%E5%BC%80%E5%8F%91/">编程开发</a></div><div id="post-meta">发布于&nbsp;<time datetime="2021-08-29T12:01:59.000Z">2021-08-29</time></div></div>
+
+<article class='content md post'>
+<h1 class="article-title"><span>ruborute 开发日志</span></h1>
+<p>作为一个 SDVX 玩家，有一天在水群的时候看到了一位群友发了一下自己做的统计得分数据的脚本，于是催生了自己做一个查分器的想法。于是就有了 <a href="https://github.com/RinChanNOWWW/ruborute">ruborute</a> 这个项目。它的读音为 “Are you 暴龍天(ぼるて, borute)?”。我打算用这个文章来记录我在开发过程中思路。</p>
+<span id="more"></span>
+
+<h2 id="2021-9-3"><a href="#2021-9-3" class="headerlink" title="2021-9-3"></a>2021-9-3</h2><h3 id="实现数据统计并发布-v0-1-1-版本"><a href="#实现数据统计并发布-v0-1-1-版本" class="headerlink" title="实现数据统计并发布 v0.1.1 版本"></a>实现数据统计并发布 v0.1.1 版本</h3><p>这几天为 ruborute 实现了一个 <code>count</code> 指令，用途是统计每一个 level 的 S、AAA+、AAA、PUC、PUC、HC、NC 的数量，以及这个 level 的总歌曲数。写这个的时候唯一的感想就是，Rust 的 match 竟然没有其他语言 switch case 中的 fallthrough 语义。然后统计 level 数量是利用迭代器 trait 中的 <code>filter().count()</code> 来计数，感觉可以在这个基础上做一个类似于 Python 中 pandas 那样的库啊（可能已经有了）。</p>
+<p>之后想把 ruborute 上传到 crates.io 以及类似于 Chocolatey 这样的 Windows 包管理平台上，然后上传个 docs.rs 啥的，那还得完善一下注释才行。。。瞬间感受到开源工作者们的伟大，要做出一个高可用的开源软件出来要做的事情也太多了。</p>
+<h2 id="2021-8-31"><a href="#2021-8-31" class="headerlink" title="2021-8-31"></a>2021-8-31</h2><h3 id="发布-v0-1-0-版本"><a href="#发布-v0-1-0-版本" class="headerlink" title="发布 v0.1.0 版本"></a>发布 v0.1.0 版本</h3><p>今天为 ruborute 打了 v0.1.0 的 tag。并创建了 Github Actions 实现持续集成（CD）。当发布 tag 时会自动发布 Releases 并上传此 tag 的 build target。一开始本来像给可执行文件 ruborute.exe 打个压缩包的，但是暂时还没搞明白在 Github Actions 的 Windows 环境中该怎么打压缩包，应该是要先安装打包软件，但是我没找到合适的。所以就直接上传可执行文件到 Releases 了。</p>
+<h2 id="2021-8-30"><a href="#2021-8-30" class="headerlink" title="2021-8-30"></a>2021-8-30</h2><h3 id="实现歌曲-Volforce-的计算"><a href="#实现歌曲-Volforce-的计算" class="headerlink" title="实现歌曲 Volforce 的计算"></a>实现歌曲 Volforce 的计算</h3><p>根据 BEMANIWIKI 上记载的<a target="_blank" rel="noopener" href="http://bemaniwiki.com/index.php?SOUND%20VOLTEX%20EXCEED%20GEAR/VOLFORCE#calc">六代 VF 计算公式</a>计算出每首歌的 VF，然后再求 VF 最高的 50 个记录的平均值。由于 Rust 的 <code>f64</code> 浮点数类型的比较实现起来比较繁琐，我将所有 VF 值都乘 1000 以整数方式记下来，方便比较与计算。不过我按照这个算下来的 VF 总比游戏里的高 0.01 左右，之后还得看看是怎么回事。</p>
+<h3 id="实现-Best-50-记录的查找"><a href="#实现-Best-50-记录的查找" class="headerlink" title="实现 Best 50 记录的查找"></a>实现 Best 50 记录的查找</h3><p>按照上面计算出来的 VF 值查找最高的 50 个即可。一开始本来想用一个最大堆，优先队列来实现，后来还是图简单直接排序取 Best 50 了。</p>
+<h3 id="修复可能出现重复记录的-BUG"><a href="#修复可能出现重复记录的-BUG" class="headerlink" title="修复可能出现重复记录的 BUG"></a>修复可能出现重复记录的 BUG</h3><p>今天发现第一天其实我错了，这个记录是有可能出现重复数据的，氧无服务器可能确实会在启动的时候会压缩一次记录，所以为了提高程序的鲁棒性，还是得在读取数据的时候加入判断重复的逻辑。</p>
+<h2 id="2021-8-28"><a href="#2021-8-28" class="headerlink" title="2021-8-28"></a>2021-8-28</h2><h3 id="实现通过歌曲名查找游玩记录"><a href="#实现通过歌曲名查找游玩记录" class="headerlink" title="实现通过歌曲名查找游玩记录"></a>实现通过歌曲名查找游玩记录</h3><p>今天实现了通过歌曲名来查找游玩记录的功能。整体的思路是先到 <code>music_store</code> 通过音乐名找到对应的 <code>music_id</code>，然后再通过 <code>music_id</code> 到 <code>record_store</code> 中查找对应记录。在这里将 <code>record_store</code> 中通过 <code>music_id</code> 查找记录的方法改造成了批量读取，也就是参数是一系列 <code>music_id</code>，这样也易于功能的扩展。在歌名查找的问题上，我一开始想使用严格的正则匹配，但后来想没有几个人能记住完整的歌名，于是引入了模糊匹配（fuzzy matching），这里使用的轮子是 <a target="_blank" rel="noopener" href="https://gitlab.com/EnricoCh/rust-fuzzy-search">rust-fuzzy-search</a>，实现了模糊匹配算法，使用起来也比较简单。目前对于名称的搜索，模糊匹配的评分（score）定的大于 0.5，这个评分对于英文来说还不错，对于汉字可能要差点。然后目前还需要优化的一个点就是这个算法是大小写敏感的，之后只需要在 <code>filter</code> 方法的闭包函数统一一下大小写即可优化。</p>
+<p>通过写这个功能，我发现 Rust 里像 <code>HashMap</code> 和 <code>Vec</code> 这样的容器的迭代器的方法是真的香啊，只需要简单地调用 <code>map</code>, <code>filter</code>, <code>flatten</code> 这些方法再 <code>collect</code> 一下就能完成把想要的数据从容器里洗出来，这是比 C++ STL 方便的一点。</p>
+<h3 id="在启动时组合完整信息"><a href="#在启动时组合完整信息" class="headerlink" title="在启动时组合完整信息"></a>在启动时组合完整信息</h3><p>之前的 <code>record_store</code> 中只保存了 <code>savedata.db</code> 中的游玩记录信息，如果要输出完整信息，需要到 <code>music_store</code> 中查一下再组合成 <code>FullRecord</code> 输出。为了更加方便地编写业务代码，我决定在 ruborute 启动时，也就是读取数据文件时就组装出 <code>FullRecord</code> 然后存入 <code>record_store</code> 中。</p>
+<h2 id="2021-8-27"><a href="#2021-8-27" class="headerlink" title="2021-8-27"></a>2021-8-27</h2><h3 id="引入-music-db-xml-的音乐信息"><a href="#引入-music-db-xml-的音乐信息" class="headerlink" title="引入 music_db.xml 的音乐信息"></a>引入 music_db.xml 的音乐信息</h3><p>今天的工作主要是接入游戏的音乐数据文件 <code>data/others/music_db.xml</code>，以支撑后续主要功能（查歌曲名、等级、VF等）的实现。不过要读这个 XML 文件可把我给难到了。XML Parser 的轮子自然不在少数，但是 <code>music_db.xml</code> 这个文件的编码是 <code>shift-jis</code> ，而 Rust 的默认读取格式是 UTF-8，而支持读取不同格式的 XML  库又异常的少。如果不做处理的话，一旦蹦到日文或者其他稀奇古怪的字符就会是乱码。所以急需一个支持读取非   UTF-8 编码的 XML 库。万幸的是，<a href="https://github.com/tafia/quick-xml">quick-xml</a> 这个库的 encoding feature 支持不同编码。它通过 XML 文件一开始的 <code>xml</code> Event 中的 encoding 字段来判断整个文件的编码格式，然后用 <a href="https://github.com/hsivonen/encoding_rs">encoding_rs</a> 这个库来解码，并转成 UTF-8 格式。而且更好的是，quick-xml 可以直接集成到 serde 中。虽然一开始我为了优化内存，并不想一口气读入整个 JSON 和 XML 文件，但是我并没有想到一个比较好的方法来使用 quick-xml + serde 流式读取 XML 文件，于是目前想的还是一次性载入所有数据到内存中（目前启动 ruborute 大概需要 1.2MB 内存）。实现了 <code>music_db.xml</code> 的读取之后，便可以顺利为歌曲数据输出歌曲名字和等级的信息了。</p>
+<h3 id="优化-Cmdline-模块"><a href="#优化-Cmdline-模块" class="headerlink" title="优化 Cmdline 模块"></a>优化 Cmdline 模块</h3><p>今天还未 <code>Cmd</code> 这个 trait 增加了 <code>name()</code>, <code>usage()</code>, <code>description()</code> 这三个方法。并增加了一个叫 <code>Cmdline</code> 的对象来保存实现了的 Cmd。优化了可扩展性，以后我加入命令只用专注于实现 <code>Cmd</code> ，然后再用 <code>add_command</code> 加入到 <code>Cmdline</code> 中即可，减少了后期工作量。</p>
+<h3 id="改造歌曲记录逻辑"><a href="#改造歌曲记录逻辑" class="headerlink" title="改造歌曲记录逻辑"></a>改造歌曲记录逻辑</h3><p>今天发现了一首歌一个难度的记录只会记录一次，所以删除了一些判重的逻辑。然后将 <code>record_store</code> 中 <code>music_id</code> 到 <code>Record</code> 的记录改造成了 <code>Vec&lt;Record&gt;</code> ，因为会有同一首歌不同难度的记录。为了查询的便捷，就将一首歌存一块了。</p>
+<h2 id="2021-8-26"><a href="#2021-8-26" class="headerlink" title="2021-8-26"></a>2021-8-26</h2><h3 id="确定技术路线"><a href="#确定技术路线" class="headerlink" title="确定技术路线"></a>确定技术路线</h3><p>最开始是为决定这个项目的技术路线。由于我用的游戏服务器采用的 JSON 来存储所有的游戏数据，所以需要自己撸一个存储引擎。一开始我就想到了曾经做过的 PingCAP Talent Plan 的项目 <a href="https://github.com/RinChanNOWWW/simple-rust-kvs">simple-rust-kvs</a>，做一个 DB Server，然后通过网络请求来获取数据，再通过后端渲染一个 HTML 页面之类的。但是发现其实并没有这个必要，因为对于这样一个需求有这样的特点：</p>
+<ul>
+<li>游玩数据不可能超过万的量级。</li>
+<li>一切数据都是在本地，使用查分工具都是在本地，也没必要做成 server。</li>
+<li>还要设计 HTML 页面太麻烦了。</li>
+<li>没有高并发的必要。</li>
+</ul>
+<p>于是我选择做一个 command-line 的工具，用户只需要指定数据所在路径，再结合各种 flag 和 arg 来完成需求。为了更高的可用性，我决定将 ruborute 设计成交互式的 cli 工具。</p>
+<p>接下来就是编程语言的选择了。一开始我是想用 C++ 来写，但是转念一想，这个项目必定要用上各种第三方的轮子，比如 cli 参数的读取，数据的反序列化，以及展示数据等等。所以我选择了和 C++ 差不多 Rust，后者有强大的社区资源支撑，不怕找不到轮子，而且能帮我复健一下 Rust 这门基本不用的语言（为什么不用最熟悉的 Go 是因为实在不想写 Go 了）。</p>
+<p>就这样我决定使用 Rust 来编写这个 cli 应用，它具有以下的特点：</p>
+<ul>
+<li>以交互式命令行的形式运行，用户输入特定的指令进行交互。</li>
+<li>单线程。</li>
+<li>一次性载入数据到内存。</li>
+<li>具有美观的展示内容。</li>
+</ul>
+<h3 id="确定要使用的开源库"><a href="#确定要使用的开源库" class="headerlink" title="确定要使用的开源库"></a>确定要使用的开源库</h3><p>对于命令行参数的实现，当然是选择了我们的老朋友 <a href="https://github.com/clap-rs/clap">clap</a>，使用的是 3.0.0-beta.2 版本，这个版本可以使用 derive 来定义 struct。这里还有一个坑的地方就是，需要在 <code>Cargo.toml</code> 中指定 <code>calp = &quot;=3.0.0-beta.2&quot;</code>，不然 cargo 会下载 beta.4 的版本，然而这个版本会有 bug。</p>
+<p>对于 JSON 的反序列化，当然也是我们的老朋友 <a href="https://github.com/serde-rs/serde">serde</a> 和 <a href="https://github.com/serde-rs/json">serde_json</a>。</p>
+<p>对于交互式 io 的实现，我使用的是 <a href="https://github.com/kkawakam/rustyline">rustyline</a>，这个库能够方便地读取数据以及控制字符，还能自己做一些美化（比如颜色啥的）。</p>
+<p>然后就是数据结果的展示。我想的是通过表（Table）的形式打印出来，于是就选择了 <a href="https://github.com/phsym/prettytable-rs">prettytable-rs</a> 这个看起来比较好用也好看的库。</p>
+<p>对于命令功能的可扩展性实现，我定义了一个 <code>Cmd</code> 的 trait，它必须拥有 <code>do_cmd</code> 的功能，然后通过 Rust 的 dyn Trait 来通过用户输入在运行时指定相应 Cmd。</p>
+<h3 id="实现通过音乐-id-查找游玩记录"><a href="#实现通过音乐-id-查找游玩记录" class="headerlink" title="实现通过音乐 id 查找游玩记录"></a>实现通过音乐 id 查找游玩记录</h3><p>依靠以上开源组件，我实现了基本的从用户通过命令行启动 ruborute，再到输入交互式命令，再到打印出表结构数据的功能。</p>
+
+
+<div class="article-footer reveal fs14"><section id="license"><div class="header"><span>许可协议</span></div><div class="body"><p>本文采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">署名-非商业性使用-相同方式共享 4.0 国际</a> 许可协议，转载请注明出处。</p>
+</div></section></div>
+
+</article>
+
+<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/cpp-type-traits/">C++ 类型萃取<span class="note">较早</span></a><div class="line"></div><a id="prev" href="/tinykv-notes/">TinyKV 实现笔记<span class="note">较新</span></a><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
+
+
+
+
+
+
+
+
+      
+<footer class="page-footer reveal fs12"><hr><div class="text"><p>本博客所有文章除特别声明外，均采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> 许可协议，转载请注明出处。</p>
+<p>本站由 <a href="https://github.com/RinChanNOWWW/">@RinChanNOW</a> 创建，使用 <a href="https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0" title="v1.5.0">Stellar</a> 作为主题。</p>
+</div></footer>
+
+      <div class='float-panel mobile-only blur' style='display:none'>
+  <button type='button' class='sidebar-toggle mobile' onclick='sidebar.toggle()'>
+    <svg class="icon" style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="15301"><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 2.3 26.8 24.6 47.5 51.6 47.6h416.5v4z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15302"></path><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 1.9 27.7 23.9 49.7 51.6 51.6h416.5z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15303"></path></svg>
+  </button>
+</div>
+
+    </div>
+  </div>
+  <div class='scripts'>
+    <script type="text/javascript">
+  stellar = {
+    // 懒加载 css https://github.com/filamentgroup/loadCSS
+    loadCSS: (href, before, media, attributes) => {
+      var doc = window.document;
+      var ss = doc.createElement("link");
+      var ref;
+      if (before) {
+        ref = before;
+      } else {
+        var refs = (doc.body || doc.getElementsByTagName("head")[0]).childNodes;
+        ref = refs[refs.length - 1];
+      }
+      var sheets = doc.styleSheets;
+      if (attributes) {
+        for (var attributeName in attributes) {
+          if (attributes.hasOwnProperty(attributeName)) {
+            ss.setAttribute(attributeName, attributes[attributeName]);
+          }
+        }
+      }
+      ss.rel = "stylesheet";
+      ss.href = href;
+      ss.media = "only x";
+      function ready(cb) {
+        if (doc.body) {
+          return cb();
+        }
+        setTimeout(function () {
+          ready(cb);
+        });
+      }
+      ready(function () {
+        ref.parentNode.insertBefore(ss, before ? ref : ref.nextSibling);
+      });
+      var onloadcssdefined = function (cb) {
+        var resolvedHref = ss.href;
+        var i = sheets.length;
+        while (i--) {
+          if (sheets[i].href === resolvedHref) {
+            return cb();
+          }
+        }
+        setTimeout(function () {
+          onloadcssdefined(cb);
+        });
+      };
+      function loadCB() {
+        if (ss.addEventListener) {
+          ss.removeEventListener("load", loadCB);
+        }
+        ss.media = media || "all";
+      }
+      if (ss.addEventListener) {
+        ss.addEventListener("load", loadCB);
+      }
+      ss.onloadcssdefined = onloadcssdefined;
+      onloadcssdefined(loadCB);
+      return ss;
+    },
+
+    // 从 butterfly 和 volantis 获得灵感
+    loadScript: (src, opt) => new Promise((resolve, reject) => {
+      var script = document.createElement('script');
+      script.src = src;
+      if (opt) {
+        for (let key of Object.keys(opt)) {
+          script[key] = opt[key]
+        }
+      } else {
+        // 默认异步，如果需要同步，第二个参数传入 {} 即可
+        script.async = true
+      }
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    }),
+
+    // https://github.com/jerryc127/hexo-theme-butterfly
+    jQuery: (fn) => {
+      if (typeof jQuery === 'undefined') {
+        stellar.loadScript(stellar.plugins.jQuery).then(fn)
+      } else {
+        fn()
+      }
+    }
+  };
+  stellar.github = 'https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0';
+  stellar.config = {
+    date_suffix: {
+      just: '刚刚',
+      min: '分钟前',
+      hour: '小时前',
+      day: '天前',
+      month: '个月前',
+    },
+  };
+
+  // required plugins (only load if needs)
+  stellar.plugins = {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js',
+    sitesjs: '/js/plugins/sites.js',
+    friendsjs: '/js/plugins/friends.js',
+  };
+
+  // optional plugins
+  if ('true' == 'true') {
+    stellar.plugins.lazyload = Object.assign({"enable":true,"js":"https://cdn.jsdelivr.net/npm/vanilla-lazyload@17.3.1/dist/lazyload.min.js","transition":"blur"});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.swiper = Object.assign({"enable":true,"css":"https://unpkg.com/swiper/swiper-bundle.min.css","js":"https://unpkg.com/swiper/swiper-bundle.min.js"});
+  }
+  if ('' == 'true') {
+    stellar.plugins.scrollreveal = Object.assign({"enable":null,"js":"https://cdn.jsdelivr.net/npm/scrollreveal@4.0.9/dist/scrollreveal.min.js","distance":"8px","duration":500,"interval":100,"scale":1});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.preload = Object.assign({"enable":true,"service":"flying_pages","instant_page":"https://cdn.jsdelivr.net/gh/volantis-x/cdn-volantis@4.1.2/js/instant_page.js","flying_pages":"https://cdn.jsdelivr.net/gh/gijo-varghese/flying-pages@2.1.2/flying-pages.min.js"});
+  }
+</script>
+
+<!-- required -->
+
+  
+<script src="/js/main.js" async></script>
+
+
+
+<!-- optional -->
+
+
+
+<!-- inject -->
+
+
+  </div>
+</body>
+</html>

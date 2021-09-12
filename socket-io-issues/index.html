@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+
+<head>
+  <meta name="generator" content="Hexo 5.4.0">
+  <meta charset="utf-8">
+  
+
+  <meta http-equiv='x-dns-prefetch-control' content='on' />
+  <link rel='dns-prefetch' href='https://cdn.jsdelivr.net'>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+  <meta name="renderer" content="webkit">
+  <meta name="force-rendering" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  <meta name="HandheldFriendly" content="True" >
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#f8f8f8">
+  <title>Socket.io 踩坑记录 - リン屋</title>
+
+  
+    <meta name="description" content="最近由于项目需要接触了 socket.io 这一套工具，它本身是一个 Node.js 的包，使用 long polling 或者 websocket 的方式（在我的项目中我是用的是 websocket）提供持续的网络连接服务。由于简单好用（虽然我在知乎上看到有人说这玩意儿就是给小白玩的，2333），很多开发者为其开发了不同语言的 SDK，比如 Java、C++、Go 等，然后我项目的前端用的 No">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Socket.io 踩坑记录">
+<meta property="og:url" content="https://github.com/RinChanNOWWW/socket-io-issues/">
+<meta property="og:site_name" content="リン屋">
+<meta property="og:description" content="最近由于项目需要接触了 socket.io 这一套工具，它本身是一个 Node.js 的包，使用 long polling 或者 websocket 的方式（在我的项目中我是用的是 websocket）提供持续的网络连接服务。由于简单好用（虽然我在知乎上看到有人说这玩意儿就是给小白玩的，2333），很多开发者为其开发了不同语言的 SDK，比如 Java、C++、Go 等，然后我项目的前端用的 No">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-12-31T10:40:20.000Z">
+<meta property="article:modified_time" content="2020-12-31T10:40:20.000Z">
+<meta property="article:author" content="RinChanNOW">
+<meta property="article:tag" content="Node.js">
+<meta property="article:tag" content="Golang">
+<meta name="twitter:card" content="summary">
+  
+  
+
+  <!-- feed -->
+  
+
+  
+    
+<link rel="stylesheet" href="/css/main.css">
+
+  
+
+  
+
+  
+</head>
+
+<body>
+  
+
+
+  <div class='l_body' id='start'>
+    <aside class='l_left' layout='post'>
+    
+
+
+<header class="header">
+
+<div class="logo-wrap"><a class="avatar" href="/about/"><div class="bg" style="opacity:0;background-image:url(https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.2/avatar/round/rainbow64@3x.webp);"></div><img no-lazy class="avatar" src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/profile/avatar.jpg" onerror="javascript:this.classList.add('error');this.src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/image/2659360.svg';"></a><a class="title" href="/"><div class="main">リン屋</div><div class="sub cap">RinChanNOW's blog</div></a></div>
+<nav class="menu dis-select"><a class="nav-item active" href="/">博客</a><a class="nav-item" href="/about/">关于</a></nav></header>
+
+<div class="widgets">
+
+<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%B7%A8%E5%9F%9F%E8%AF%B7%E6%B1%82%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-text">跨域请求的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#go-socket-io-%E4%B8%8E-socket-io-%E7%9A%84%E5%85%BC%E5%AE%B9%E6%80%A7%E9%97%AE%E9%A2%98"><span class="toc-text">go-socket.io 与 socket.io 的兼容性问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%86%E5%B8%83%E5%BC%8F%E5%9C%BA%E6%99%AF%E4%B8%8B%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-text">分布式场景下的问题</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1%E6%96%B9%E6%A1%88"><span class="toc-text">负载均衡方案</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6%E6%96%B9%E6%A1%88"><span class="toc-text">消息中间件方案</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Redis-%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97"><span class="toc-text">Redis 消息队列</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%88%A9%E7%94%A8-Redis-%E7%BC%93%E5%AD%98%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0"><span class="toc-text">利用 Redis 缓存自行实现</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#RocketMQ-%E7%AD%89%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97"><span class="toc-text">RocketMQ 等消息队列</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E%E7%9A%84%E5%90%90%E6%A7%BD%E4%B8%8E%E6%80%BB%E7%BB%93%E4%B9%8B%E7%B1%BB%E7%9A%84%E8%AF%9D"><span class="toc-text">写在最后的吐槽与总结之类的话</span></a></li></ol></div></div></div>
+
+
+</div>
+
+
+    </aside>
+    <div class='l_main'>
+      
+
+      
+
+
+<div class="bread-nav fs12"><div id="breadcrumb"><a class="cap breadcrumb" href="/">主页</a><span class="sep"></span><a class="cap breadcrumb" href="/">文章</a><span class="sep"></span><a class="cap breadcrumb-link" href="/blog/categories/%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3/">问题解决</a></div><div id="post-meta">发布于&nbsp;<time datetime="2020-12-31T10:40:20.000Z">2020-12-31</time></div></div>
+
+<article class='content md post'>
+<h1 class="article-title"><span>Socket.io 踩坑记录</span></h1>
+<p>最近由于项目需要接触了 socket.io 这一套工具，它本身是一个 Node.js 的包，使用 long polling 或者 websocket 的方式（在我的项目中我是用的是 websocket）提供持续的网络连接服务。由于简单好用（虽然我在知乎上看到有人说这玩意儿就是给小白玩的，2333），很多开发者为其开发了不同语言的 SDK，比如 Java、C++、Go 等，然后我项目的前端用的 Node.js，后端用 Golang。由于 socket.io 本身的设计以及 Go 版本开源库的残缺，踩了很多坑，我决定在这篇博客中好好总结一下。</p>
+<span id="more"></span>
+
+<h2 id="跨域请求的问题"><a href="#跨域请求的问题" class="headerlink" title="跨域请求的问题"></a>跨域请求的问题</h2><p>由于 go-socket.io 是基于 http 服务器的，在建立 websocket 连接的时候会先发送一个 get 请求，由于请求是跨域的，所以理所应当会被服务器给拦下来，然后返回一个 403，所以首先得处理跨域的问题。</p>
+<p>处理这个问题有很多种方式。</p>
+<p>第一种方式是直接拿到请求后把 Header 里的 Origin 字段干掉，然后再交给接下来的 http 处理逻辑处理。第二种方式是添加一个中间件来设置 Header 中的允许跨域字段，这两种方式在这个 issue 中都有实现方法： <a href="https://github.com/googollee/go-socket.io/issues/242">https://github.com/googollee/go-socket.io/issues/242</a></p>
+<p>第三种方式是社区开发者们新提供的方式，就是在启动 socket.io server 的 option 中指定允许的域名，这算是最合适的一种方法了吧。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">allowOrigin := <span class="function"><span class="keyword">func</span><span class="params">(r *http.Request)</span> <span class="title">bool</span></span> &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span></span><br><span class="line">&#125;</span><br><span class="line">server, err := socketio.NewServer(&amp;engineio.Options&#123;</span><br><span class="line">    Transports: []transport.Transport&#123;</span><br><span class="line">        &amp;polling.Transport&#123;</span><br><span class="line">        Client: &amp;http.Client&#123;</span><br><span class="line">            Timeout: time.Minute,</span><br><span class="line">        &#125;,</span><br><span class="line">        CheckOrigin: allowOrigin,</span><br><span class="line">        &#125;,</span><br><span class="line">    &amp;websocket.Transport&#123;</span><br><span class="line">        CheckOrigin: allowOrigin,</span><br><span class="line">    &#125;,</span><br><span class="line">    &#125;,</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>更多信息可以查看这个 issue：<a href="https://github.com/googollee/go-socket.io/issues/372">https://github.com/googollee/go-socket.io/issues/372</a></p>
+<h2 id="go-socket-io-与-socket-io-的兼容性问题"><a href="#go-socket-io-与-socket-io-的兼容性问题" class="headerlink" title="go-socket.io 与 socket.io 的兼容性问题"></a>go-socket.io 与 socket.io 的兼容性问题</h2><p>在前端，我一开始使用的是 3.0 版本的 socket.io。结果发现建立连接的握手请求前后端对应不上，后端触发两次 connect 事件，之后也无法进行正常的双工通信，后来发现原来 go 这个库还不支持 2.0 版本及以上的 socket.io。这其中应该是通信协议上不一样。</p>
+<p>这个项目其实很早就已经搁置了，owner 在几年前就撒手不管了，这几年一直是靠开源社区的开发者们来维护，所以这个项目的进度迟迟得不到更新。目前这个库只支持 <a href="mailto:&#x73;&#x6f;&#99;&#x6b;&#101;&#116;&#x2e;&#105;&#x6f;&#x40;&#50;&#x2e;&#x30;">&#x73;&#x6f;&#99;&#x6b;&#101;&#116;&#x2e;&#105;&#x6f;&#x40;&#50;&#x2e;&#x30;</a> 之前的版本，不支持 2.0。</p>
+<p>如果实在要与 socket.io 2.0 进行对接，可以选用其他的语言进行开发，或者使用其他的几个 go 开源库，虽然这几个 star 不多，我也没用过。</p>
+<ul>
+<li><p><a href="https://github.com/pschlump/socketio">https://github.com/pschlump/socketio</a></p>
+</li>
+<li><p><a href="https://github.com/ambelovsky/gosf-socketio">https://github.com/ambelovsky/gosf-socketio</a></p>
+</li>
+</ul>
+<p>详情可见这个 issue：<a href="https://github.com/googollee/go-socket.io/issues/188">https://github.com/googollee/go-socket.io/issues/188</a></p>
+<p>之后我也打算看看这个项目，看看能不能贡献点什么。</p>
+<h2 id="分布式场景下的问题"><a href="#分布式场景下的问题" class="headerlink" title="分布式场景下的问题"></a>分布式场景下的问题</h2><p>当我把我的后端服务部署到了集群上，我发现有些时候客户端收不到本应收到的消息。经过一系列的分析查找，我发现原来是因为不只有一个实例部署了我的服务，然后所有访问服务的请求都会被 nginx 网关按照一定策略进行负载均衡，然后再分配到某个实例上。又因为我将所有的 socket 连接上下文都存到了内存中，每次都从内存中提取会议中的连接者，再将消息发给他们，由于负载均衡的存在，同一个会议的连接可能被导向不同的实例，这种情况下一个连接生产的信息就无法转发给另一个连接。</p>
+<p>为解决这个问题可以从两方面入手。第一种是从负载均衡入手，nginx 的负载均衡策略有很多种，比如对 ip 进行 hash，或者对请求头中的某些信息进行 hash，然后将请求导向不同实例，我们可以更改策略将同一个会议的连接全部导向一个实例；第二种是使用消息中间件，将一个连接产生的消息推入消息队列中，然后另一个连接从中读取。</p>
+<p>经过多方面的考量，我最终选用了更改 nginx 负载均衡策略的方式，因为公司的各个消息中间件组件都有很大的局限性，下面我也会说说各种方案我是怎么想的。</p>
+<h3 id="负载均衡方案"><a href="#负载均衡方案" class="headerlink" title="负载均衡方案"></a>负载均衡方案</h3><p>socket.io 建立连接时会发送一个 GET 请求，然后开始进行握手，而我们可以自定义这个请求。但由于 socket.io 为了遵循 websocket 协议，当使用 websocket 协议传输时，我们没办法更改请求的 Header。但是我们仍然可以为请求添加 query 参数，比如我们可以让同一个会议的连接者请求时都在 query 中带上一个相同的标识，然后再将 nginx 的负载均衡策略改为只按照请求 uri 进行 hash，这样便可以将请求 uri 相同的所有连接都导向同一个实例。</p>
+<p>不过这种方案可能会出现热点问题，那就等之后真的出现了再说吧。（不过我应该是等不到那个时候了）</p>
+<h3 id="消息中间件方案"><a href="#消息中间件方案" class="headerlink" title="消息中间件方案"></a>消息中间件方案</h3><h4 id="Redis-消息队列"><a href="#Redis-消息队列" class="headerlink" title="Redis 消息队列"></a>Redis 消息队列</h4><p>其实 Redis 自己也实现了有消息队列功能的接口。消费者可以 Subscribe 一个 Channel，当生产者向 Channel 中推消息的时候，消费者便可以从此 Channel 中拿出消息。不过不幸的是，我们公司的 Redis 并没有支持这一功能，而且公司貌似禁用任何阻塞操作，遂作罢。另外，消费者是不是共同消费 Channel 中的消息，还是一个消费者一个副本，这个我也没有深入研究。</p>
+<h4 id="利用-Redis-缓存自行实现"><a href="#利用-Redis-缓存自行实现" class="headerlink" title="利用 Redis 缓存自行实现"></a>利用 Redis 缓存自行实现</h4><p>这是一个临时得不能再临时的方案，肯定是无法投入大规模使用的。这个方案简单来说，就是在 Redis 中保存有到某个会议连接的实例，生产者会为每一个实例生产一份消息，然后每一个实例取出自己的一份，在发给连接到自己的连接者。这个方案在逻辑上是很完美的，但是会极其消耗资源。首先，我的一个消息大概会有 8KB，这对于 Redis 来说本身就很离谱了；其次，要从 Redis 中拿出实时的消息，需要随时轮询 Redis，因为公司的 Redis 不提供阻塞操作，而不停的轮询是极其浪费资源的。处于这样的考虑，我还是暂时没选择这样的方案。</p>
+<h4 id="RocketMQ-等消息队列"><a href="#RocketMQ-等消息队列" class="headerlink" title="RocketMQ 等消息队列"></a>RocketMQ 等消息队列</h4><p>按理来说使用传统的消息队列是最靠谱的方案，生产者将消息推入消息队列，然后每一个订阅了的消费者都可以从中拿到消息。但是公司的消息队列组件看起来并不适合我们这业务场景。公司的 Kafka 主要是为离线业务服务，它会将消息转存到 HDFS，并不太适合我这样的实时在线业务。于是我选择了公司推荐的支持在线业务的 RocketMQ看一看。</p>
+<p>其实 RocketMQ 是支持广播消费的（就是生产者产生的每一个消息每一个订阅了的消费者都能消费到，与之对应的是集群消费，就是一个消费者消费了其他消费者就消费不到了），但是公司的 RocketMQ 组建尚未支持。<del>那我就又只能爬了。</del>其实消费组这一概念也可以实现这样的机制，但是公司的消息队列服务都是公用的，每一个 Topic 的 Consume Group 都需要单独申请，我不可能为每一个实例都手动申请一个，因为实例是弹性变化的。遂作罢。</p>
+<p>不过还是有一个方案的，就是自建一个消息队列服务，只给自己用，这样上面的问题就都迎刃而解了。不过这得以后有时间再来慢慢研究。。。</p>
+<h2 id="写在最后的吐槽与总结之类的话"><a href="#写在最后的吐槽与总结之类的话" class="headerlink" title="写在最后的吐槽与总结之类的话"></a>写在最后的吐槽与总结之类的话</h2><p>go-socket.io 这个库其实还有一些其他问题，比如并没有保证连接的线程安全，之后我也想仔细看看它的源码以及 socket.io 的源码与原理，希望能帮这个开源项目做一点优化和增强工作，也好填补一下之后漫长寒假的空虚（到时候可能就每天躺尸了）</p>
+<p>对于我接手的这个项目，虽然开发规模不大，主要逻辑也非常简单，比起我们的主要业务来说那就是小玩具，工程量和大作业差不多，但是也让我感受到了开发一个企业级应用需要考虑的各种事情，并且积累的挺多开发经验（虽然大部分是 Node.JS 和 TS 的经验）。</p>
+<p>最后不得不说，开源真是个好东西，节约了大量开发成本，再次感谢各位开源大佬。</p>
+
+
+<div class="article-footer reveal fs14"><section id="license"><div class="header"><span>许可协议</span></div><div class="body"><p>本文采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">署名-非商业性使用-相同方式共享 4.0 国际</a> 许可协议，转载请注明出处。</p>
+</div></section></div>
+
+</article>
+
+<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/chrome-file-system-access/">File System Access API：简化访问本地文件<span class="note">较早</span></a><div class="line"></div><a id="prev" href="/2020-conclusion/">2020<span class="note">较新</span></a><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
+
+
+
+
+
+
+
+
+      
+<footer class="page-footer reveal fs12"><hr><div class="text"><p>本博客所有文章除特别声明外，均采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> 许可协议，转载请注明出处。</p>
+<p>本站由 <a href="https://github.com/RinChanNOWWW/">@RinChanNOW</a> 创建，使用 <a href="https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0" title="v1.5.0">Stellar</a> 作为主题。</p>
+</div></footer>
+
+      <div class='float-panel mobile-only blur' style='display:none'>
+  <button type='button' class='sidebar-toggle mobile' onclick='sidebar.toggle()'>
+    <svg class="icon" style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="15301"><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 2.3 26.8 24.6 47.5 51.6 47.6h416.5v4z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15302"></path><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 1.9 27.7 23.9 49.7 51.6 51.6h416.5z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15303"></path></svg>
+  </button>
+</div>
+
+    </div>
+  </div>
+  <div class='scripts'>
+    <script type="text/javascript">
+  stellar = {
+    // 懒加载 css https://github.com/filamentgroup/loadCSS
+    loadCSS: (href, before, media, attributes) => {
+      var doc = window.document;
+      var ss = doc.createElement("link");
+      var ref;
+      if (before) {
+        ref = before;
+      } else {
+        var refs = (doc.body || doc.getElementsByTagName("head")[0]).childNodes;
+        ref = refs[refs.length - 1];
+      }
+      var sheets = doc.styleSheets;
+      if (attributes) {
+        for (var attributeName in attributes) {
+          if (attributes.hasOwnProperty(attributeName)) {
+            ss.setAttribute(attributeName, attributes[attributeName]);
+          }
+        }
+      }
+      ss.rel = "stylesheet";
+      ss.href = href;
+      ss.media = "only x";
+      function ready(cb) {
+        if (doc.body) {
+          return cb();
+        }
+        setTimeout(function () {
+          ready(cb);
+        });
+      }
+      ready(function () {
+        ref.parentNode.insertBefore(ss, before ? ref : ref.nextSibling);
+      });
+      var onloadcssdefined = function (cb) {
+        var resolvedHref = ss.href;
+        var i = sheets.length;
+        while (i--) {
+          if (sheets[i].href === resolvedHref) {
+            return cb();
+          }
+        }
+        setTimeout(function () {
+          onloadcssdefined(cb);
+        });
+      };
+      function loadCB() {
+        if (ss.addEventListener) {
+          ss.removeEventListener("load", loadCB);
+        }
+        ss.media = media || "all";
+      }
+      if (ss.addEventListener) {
+        ss.addEventListener("load", loadCB);
+      }
+      ss.onloadcssdefined = onloadcssdefined;
+      onloadcssdefined(loadCB);
+      return ss;
+    },
+
+    // 从 butterfly 和 volantis 获得灵感
+    loadScript: (src, opt) => new Promise((resolve, reject) => {
+      var script = document.createElement('script');
+      script.src = src;
+      if (opt) {
+        for (let key of Object.keys(opt)) {
+          script[key] = opt[key]
+        }
+      } else {
+        // 默认异步，如果需要同步，第二个参数传入 {} 即可
+        script.async = true
+      }
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    }),
+
+    // https://github.com/jerryc127/hexo-theme-butterfly
+    jQuery: (fn) => {
+      if (typeof jQuery === 'undefined') {
+        stellar.loadScript(stellar.plugins.jQuery).then(fn)
+      } else {
+        fn()
+      }
+    }
+  };
+  stellar.github = 'https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0';
+  stellar.config = {
+    date_suffix: {
+      just: '刚刚',
+      min: '分钟前',
+      hour: '小时前',
+      day: '天前',
+      month: '个月前',
+    },
+  };
+
+  // required plugins (only load if needs)
+  stellar.plugins = {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js',
+    sitesjs: '/js/plugins/sites.js',
+    friendsjs: '/js/plugins/friends.js',
+  };
+
+  // optional plugins
+  if ('true' == 'true') {
+    stellar.plugins.lazyload = Object.assign({"enable":true,"js":"https://cdn.jsdelivr.net/npm/vanilla-lazyload@17.3.1/dist/lazyload.min.js","transition":"blur"});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.swiper = Object.assign({"enable":true,"css":"https://unpkg.com/swiper/swiper-bundle.min.css","js":"https://unpkg.com/swiper/swiper-bundle.min.js"});
+  }
+  if ('' == 'true') {
+    stellar.plugins.scrollreveal = Object.assign({"enable":null,"js":"https://cdn.jsdelivr.net/npm/scrollreveal@4.0.9/dist/scrollreveal.min.js","distance":"8px","duration":500,"interval":100,"scale":1});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.preload = Object.assign({"enable":true,"service":"flying_pages","instant_page":"https://cdn.jsdelivr.net/gh/volantis-x/cdn-volantis@4.1.2/js/instant_page.js","flying_pages":"https://cdn.jsdelivr.net/gh/gijo-varghese/flying-pages@2.1.2/flying-pages.min.js"});
+  }
+</script>
+
+<!-- required -->
+
+  
+<script src="/js/main.js" async></script>
+
+
+
+<!-- optional -->
+
+
+
+<!-- inject -->
+
+
+  </div>
+</body>
+</html>

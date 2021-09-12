@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+
+<head>
+  <meta name="generator" content="Hexo 5.4.0">
+  <meta charset="utf-8">
+  
+
+  <meta http-equiv='x-dns-prefetch-control' content='on' />
+  <link rel='dns-prefetch' href='https://cdn.jsdelivr.net'>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+  <meta name="renderer" content="webkit">
+  <meta name="force-rendering" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  <meta name="HandheldFriendly" content="True" >
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#f8f8f8">
+  <title>2021年4月20日 TEG 云架构部门面经 - リン屋</title>
+
+  
+    <meta name="description" content="2021年4月20日 TEG 云架构部门面经">
+<meta property="og:type" content="article">
+<meta property="og:title" content="2021年4月20日 TEG 云架构部门面经">
+<meta property="og:url" content="https://github.com/RinChanNOWWW/2021-4-20-tx-interview/">
+<meta property="og:site_name" content="リン屋">
+<meta property="og:description" content="2021年4月20日 TEG 云架构部门面经">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-04-20T10:53:13.000Z">
+<meta property="article:modified_time" content="2021-04-20T10:53:13.000Z">
+<meta property="article:author" content="RinChanNOW">
+<meta property="article:tag" content="腾讯面试">
+<meta property="article:tag" content="C++">
+<meta property="article:tag" content="分布式">
+<meta name="twitter:card" content="summary">
+  
+  
+
+  <!-- feed -->
+  
+
+  
+    
+<link rel="stylesheet" href="/css/main.css">
+
+  
+
+  
+
+  
+</head>
+
+<body>
+  
+
+
+  <div class='l_body' id='start'>
+    <aside class='l_left' layout='post'>
+    
+
+
+<header class="header">
+
+<div class="logo-wrap"><a class="avatar" href="/about/"><div class="bg" style="opacity:0;background-image:url(https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.2/avatar/round/rainbow64@3x.webp);"></div><img no-lazy class="avatar" src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/profile/avatar.jpg" onerror="javascript:this.classList.add('error');this.src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/image/2659360.svg';"></a><a class="title" href="/"><div class="main">リン屋</div><div class="sub cap">RinChanNOW's blog</div></a></div>
+<nav class="menu dis-select"><a class="nav-item active" href="/">博客</a><a class="nav-item" href="/about/">关于</a></nav></header>
+
+<div class="widgets">
+
+<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E9%9D%A2"><span class="toc-text">一面</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B5%B7%E6%89%8B%E5%BC%8F"><span class="toc-text">起手式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%89%8B%E6%92%95%E4%BB%A3%E7%A0%81"><span class="toc-text">手撕代码</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%86%E5%B8%83%E5%BC%8F-ID-%E7%94%9F%E6%88%90%E5%99%A8"><span class="toc-text">分布式 ID 生成器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%9A%8F%E6%9C%BA%E6%95%B0%E4%BA%A7%E7%94%9F%E5%99%A8"><span class="toc-text">随机数产生器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%85%B6%E4%BB%96"><span class="toc-text">其他</span></a></li></ol></li></ol></div></div></div>
+
+
+</div>
+
+
+    </aside>
+    <div class='l_main'>
+      
+
+      
+
+
+<div class="bread-nav fs12"><div id="breadcrumb"><a class="cap breadcrumb" href="/">主页</a><span class="sep"></span><a class="cap breadcrumb" href="/">文章</a><span class="sep"></span><a class="cap breadcrumb-link" href="/blog/categories/%E9%9D%A2%E7%BB%8F/">面经</a></div><div id="post-meta">发布于&nbsp;<time datetime="2021-04-20T10:53:13.000Z">2021-04-20</time></div></div>
+
+<article class='content md post'>
+<h1 class="article-title"><span>2021年4月20日 TEG 云架构部门面经</span></h1>
+<p>2021年4月20日 TEG 云架构部门面经</p>
+<span id="more"></span>
+
+<h2 id="一面"><a href="#一面" class="headerlink" title="一面"></a>一面</h2><p>这次面试我觉得算是我所有面试中（虽然也没面过几次）体验最好的，没有问一道八股，感觉问的全是和部门工作内容紧紧相关的问题。面试官人也很好，虽然问的问题一开始我都答不上来，但是他会一层一层地引导我。结束之后再来看，其实一共也没问几个问题，但是因为我太菜了，足足面了1个半小时。</p>
+<h3 id="起手式"><a href="#起手式" class="headerlink" title="起手式"></a>起手式</h3><ol>
+<li>按照常规首先做了个自我介绍。</li>
+<li>问了问我之前在字节的工作内容。</li>
+<li>看到我简历里写了自己动手实现过 raft，然后问了一下我的具体实现，以及我是如何利用 raft 做一个存储系统的。针对我的数据持久化又问了一些问题。最后得知我的 raft 并不支持动态添加节点，遂作罢。</li>
+<li>我旁敲侧击了一下说自己最近在实现一个存储引擎（指 CMU 15-445 的 project），自己手写了 b+ tree 和 query executor 啥的。不过面试官得知了这个存储引擎是单机的之后便不感兴趣了。</li>
+</ol>
+<h3 id="手撕代码"><a href="#手撕代码" class="headerlink" title="手撕代码"></a>手撕代码</h3><ol>
+<li>写一个大数加法。</li>
+</ol>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">string <span class="title">add</span><span class="params">(string a, string b)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>这个直接从最低位一次向前加就行，保留一个进位变量。这个就是要注意一下不等长的情况，以及最低位是从 string 尾开始。只要没不想我被前进方向绕昏了还是能很快写出来的。</p>
+<ol start="2">
+<li>利用上面的大数加法实现大数乘法</li>
+</ol>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">string <span class="title">mul</span><span class="params">(string a, string b)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>一开始我本来想直接按照人类的思维硬怼的，但面试官说你这么写没啥意义，还是用分治法吧。</p>
+<p>具体思路就是利用递归写分治法，每次将较长的那个数分割成两半，分别求乘积，再组合起来即可。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">string part1 = <span class="built_in">mul</span>(longer.<span class="built_in">substr</span>(<span class="number">0</span>, longer.<span class="built_in">size</span>() / <span class="number">2</span>), shorter); <span class="comment">// 高位</span></span><br><span class="line">string part2 = <span class="built_in">mul</span>(longer.<span class="built_in">substr</span>(longer.<span class="built_in">size</span>(), longer.<span class="built_in">size</span>() - longer.<span class="built_in">size</span>() / <span class="number">2</span>), shorter); <span class="comment">// 低位</span></span><br><span class="line"><span class="built_in">add_zero</span>(part1, longer.<span class="built_in">size</span>() / <span class="number">2</span>); <span class="comment">// 给 part1 补 longer.size() / 2 个 0</span></span><br><span class="line">ans = <span class="built_in">add</span>(part1, part2); <span class="comment">// 利用上面的 add 函数</span></span><br></pre></td></tr></table></figure>
+
+<p>这里要注意的仍然是方向的问题，不然会像我一样直接丢人。还有就是 string 的 substr 方法第二个参数是指定个数，不是结尾位置。某些语言的切片写多了就容易下意识地以为是结尾位置，如果是 C++ 的话那一般会让你传迭代器。</p>
+<h3 id="分布式-ID-生成器"><a href="#分布式-ID-生成器" class="headerlink" title="分布式 ID 生成器"></a>分布式 ID 生成器</h3><p>设计一个分布式 ID 生成器，每次请求系统生成器会返回一个 ID，每次请求得到的是唯一且递增的。要求尽量做到高并发高可用。</p>
+<ol>
+<li>一开始我的想法和 raft 类似，采用主从结构，每次都从 leader 请求 ID，请求之后 ID 递增，leader 再同步到每个 follower 上。然后面试官说这样 leader 就成为了瓶颈，如何优化一下。</li>
+<li>在面试官的提示下得出了第二个方案。还是主从结构，但是 leader 向 follower 的同步变为了批量方式，就是让 leader 每次攒够<del>一波网络热门生物视频</del> n 次递增 ID 之后再向 follower 同步。然后如果遇到了 leader 挂了需要更换 leader 时，新 leader 直接在现有 ID 基础上 +n+1 即可保证后续的正确性。不过这个方案在每个节点上还是存在很大的性能瓶颈，能不能再优化。</li>
+<li>于是得到了第三个方案，那就是采用无主结构。现在想起来我自己的给的方案是错的，但是面试官并没有发现。晚上经室友提醒，这不就是雪花算法（snowflake）嘛（参考：<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/85837641">某篇知乎</a>），不过面试官貌似想让我答的不是雪花这种方法。</li>
+</ol>
+<h3 id="随机数产生器"><a href="#随机数产生器" class="headerlink" title="随机数产生器"></a>随机数产生器</h3><p>这里用 rand(a, b) 表示生成一个在闭区间 [a, b] 之间的整数。</p>
+<ol>
+<li>首先来了个简单的，问如何用 rand(0, 2^16-1) 构造 rand(0, 2^64-1)。这个还算简单，就是 rand(0, 2^16-1) 四次，然后在按位组合起来。（也就是进制转换的思想）。</li>
+<li>然后问如何用 rand(0,6) 构造 rand(0,9)，然后果不其然我答不上来，然后面试官进行了下一步铺垫，如何用 rand(0,6) 构造 rand(0,48)，这个其实和上面的类似。rand(0,6) 产生一个数的概率是 1/7，rand(0,48) 产生一个数的概率是 1/49，这不刚好是平方关系嘛。和 1 类似，按照进制转换结合两个数即可（若第一个产生的数是 a，第二个是 b，那结果就是 7a+b，符合概率和数字分布）。</li>
+<li>得到 rand(0,48) 之后，怎么用它构造 rand(0,9) 呢？不会，好，下一个铺垫，如何构造 rand(0,47)？那使用 rand(0,48) 生成一个随机数，如果产生的数是 48，那再来一遍，直到满足为止。</li>
+<li>那么接下来怎么用 rand(0,48) 构造 rand(0,9) 呢？抛弃掉所有大于 9 的？不太现实。那就利用除法，抛弃掉大于 39 的就是了，然后再除以 4 就可以了（为什么是 39，因为 0-39 的概率是 1/40，0-9 的概率是 1/10，刚好是 4 对 1 的转换）。</li>
+<li>以上过程就能用 rand(0,6) 构造一个 rand(0,9) 了。</li>
+<li>然后接下来问了如何设计一个筛选器，按概率选择对象 A 和 B呢（A 出现的概率为 x，B 出现的概率是 y，x+y=1）。我说，就直接用上面的方法构造一个宽度很大的随机数产生器，随机出一个数看在哪个区域里即可。</li>
+<li>然后将上面的两个对象扩展为 n 个数。遇上同理，每一个对象对应一个随机数区间，然后用一个哈希表之类的维护一下就行。</li>
+</ol>
+<h3 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h3><p>有没有用过 C++11、C++17 啥的。写 C++ 的时候有啥使用右值引用的场景。然后我当时卡壳了没想起来，然后结束之后一想，这不就是 std::move() 嘛？然后无了。具体右值引用的东西还得下来看看。</p>
+
+
+<div class="article-footer reveal fs14"><section id="license"><div class="header"><span>许可协议</span></div><div class="body"><p>本文采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">署名-非商业性使用-相同方式共享 4.0 国际</a> 许可协议，转载请注明出处。</p>
+</div></section></div>
+
+</article>
+
+<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/develop-with-issues-on-windows/">用 Windows 开发遇到的各种问题<span class="note">较早</span></a><div class="line"></div><a id="prev" href="/cpp-type-traits/">C++ 类型萃取<span class="note">较新</span></a><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
+
+
+
+
+
+
+
+
+      
+<footer class="page-footer reveal fs12"><hr><div class="text"><p>本博客所有文章除特别声明外，均采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> 许可协议，转载请注明出处。</p>
+<p>本站由 <a href="https://github.com/RinChanNOWWW/">@RinChanNOW</a> 创建，使用 <a href="https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0" title="v1.5.0">Stellar</a> 作为主题。</p>
+</div></footer>
+
+      <div class='float-panel mobile-only blur' style='display:none'>
+  <button type='button' class='sidebar-toggle mobile' onclick='sidebar.toggle()'>
+    <svg class="icon" style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="15301"><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 2.3 26.8 24.6 47.5 51.6 47.6h416.5v4z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15302"></path><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 1.9 27.7 23.9 49.7 51.6 51.6h416.5z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15303"></path></svg>
+  </button>
+</div>
+
+    </div>
+  </div>
+  <div class='scripts'>
+    <script type="text/javascript">
+  stellar = {
+    // 懒加载 css https://github.com/filamentgroup/loadCSS
+    loadCSS: (href, before, media, attributes) => {
+      var doc = window.document;
+      var ss = doc.createElement("link");
+      var ref;
+      if (before) {
+        ref = before;
+      } else {
+        var refs = (doc.body || doc.getElementsByTagName("head")[0]).childNodes;
+        ref = refs[refs.length - 1];
+      }
+      var sheets = doc.styleSheets;
+      if (attributes) {
+        for (var attributeName in attributes) {
+          if (attributes.hasOwnProperty(attributeName)) {
+            ss.setAttribute(attributeName, attributes[attributeName]);
+          }
+        }
+      }
+      ss.rel = "stylesheet";
+      ss.href = href;
+      ss.media = "only x";
+      function ready(cb) {
+        if (doc.body) {
+          return cb();
+        }
+        setTimeout(function () {
+          ready(cb);
+        });
+      }
+      ready(function () {
+        ref.parentNode.insertBefore(ss, before ? ref : ref.nextSibling);
+      });
+      var onloadcssdefined = function (cb) {
+        var resolvedHref = ss.href;
+        var i = sheets.length;
+        while (i--) {
+          if (sheets[i].href === resolvedHref) {
+            return cb();
+          }
+        }
+        setTimeout(function () {
+          onloadcssdefined(cb);
+        });
+      };
+      function loadCB() {
+        if (ss.addEventListener) {
+          ss.removeEventListener("load", loadCB);
+        }
+        ss.media = media || "all";
+      }
+      if (ss.addEventListener) {
+        ss.addEventListener("load", loadCB);
+      }
+      ss.onloadcssdefined = onloadcssdefined;
+      onloadcssdefined(loadCB);
+      return ss;
+    },
+
+    // 从 butterfly 和 volantis 获得灵感
+    loadScript: (src, opt) => new Promise((resolve, reject) => {
+      var script = document.createElement('script');
+      script.src = src;
+      if (opt) {
+        for (let key of Object.keys(opt)) {
+          script[key] = opt[key]
+        }
+      } else {
+        // 默认异步，如果需要同步，第二个参数传入 {} 即可
+        script.async = true
+      }
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    }),
+
+    // https://github.com/jerryc127/hexo-theme-butterfly
+    jQuery: (fn) => {
+      if (typeof jQuery === 'undefined') {
+        stellar.loadScript(stellar.plugins.jQuery).then(fn)
+      } else {
+        fn()
+      }
+    }
+  };
+  stellar.github = 'https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0';
+  stellar.config = {
+    date_suffix: {
+      just: '刚刚',
+      min: '分钟前',
+      hour: '小时前',
+      day: '天前',
+      month: '个月前',
+    },
+  };
+
+  // required plugins (only load if needs)
+  stellar.plugins = {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js',
+    sitesjs: '/js/plugins/sites.js',
+    friendsjs: '/js/plugins/friends.js',
+  };
+
+  // optional plugins
+  if ('true' == 'true') {
+    stellar.plugins.lazyload = Object.assign({"enable":true,"js":"https://cdn.jsdelivr.net/npm/vanilla-lazyload@17.3.1/dist/lazyload.min.js","transition":"blur"});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.swiper = Object.assign({"enable":true,"css":"https://unpkg.com/swiper/swiper-bundle.min.css","js":"https://unpkg.com/swiper/swiper-bundle.min.js"});
+  }
+  if ('' == 'true') {
+    stellar.plugins.scrollreveal = Object.assign({"enable":null,"js":"https://cdn.jsdelivr.net/npm/scrollreveal@4.0.9/dist/scrollreveal.min.js","distance":"8px","duration":500,"interval":100,"scale":1});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.preload = Object.assign({"enable":true,"service":"flying_pages","instant_page":"https://cdn.jsdelivr.net/gh/volantis-x/cdn-volantis@4.1.2/js/instant_page.js","flying_pages":"https://cdn.jsdelivr.net/gh/gijo-varghese/flying-pages@2.1.2/flying-pages.min.js"});
+  }
+</script>
+
+<!-- required -->
+
+  
+<script src="/js/main.js" async></script>
+
+
+
+<!-- optional -->
+
+
+
+<!-- inject -->
+
+
+  </div>
+</body>
+</html>

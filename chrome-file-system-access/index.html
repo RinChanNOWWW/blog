@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+
+<head>
+  <meta name="generator" content="Hexo 5.4.0">
+  <meta charset="utf-8">
+  
+
+  <meta http-equiv='x-dns-prefetch-control' content='on' />
+  <link rel='dns-prefetch' href='https://cdn.jsdelivr.net'>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+  <meta name="renderer" content="webkit">
+  <meta name="force-rendering" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  <meta name="HandheldFriendly" content="True" >
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#f8f8f8">
+  <title>File System Access API：简化访问本地文件 - リン屋</title>
+
+  
+    <meta name="description" content="原文章：https:&#x2F;&#x2F;web.dev&#x2F;file-system-access&#x2F; 原作者：Thomas Steiner（@tomayac）已同意转载。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="File System Access API：简化访问本地文件">
+<meta property="og:url" content="https://github.com/RinChanNOWWW/chrome-file-system-access/">
+<meta property="og:site_name" content="リン屋">
+<meta property="og:description" content="原文章：https:&#x2F;&#x2F;web.dev&#x2F;file-system-access&#x2F; 原作者：Thomas Steiner（@tomayac）已同意转载。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://webdev.imgix.net/file-system-access/fs-open.jpg">
+<meta property="og:image" content="https://webdev.imgix.net/file-system-access/fs-save.jpg">
+<meta property="og:image" content="https://webdev.imgix.net/file-system-access/fs-save-permission-crop.jpg">
+<meta property="og:image" content="https://webdev.imgix.net/file-system-access/fs-save-icon.jpg">
+<meta property="article:published_time" content="2020-12-23T06:31:44.000Z">
+<meta property="article:modified_time" content="2020-12-23T06:31:44.000Z">
+<meta property="article:author" content="RinChanNOW">
+<meta property="article:tag" content="Javascript">
+<meta property="article:tag" content="学习">
+<meta property="article:tag" content="Web">
+<meta property="article:tag" content="Chrome">
+<meta property="article:tag" content="文章翻译">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://webdev.imgix.net/file-system-access/fs-open.jpg">
+  
+  
+
+  <!-- feed -->
+  
+
+  
+    
+<link rel="stylesheet" href="/css/main.css">
+
+  
+
+  
+
+  
+</head>
+
+<body>
+  
+
+
+  <div class='l_body' id='start'>
+    <aside class='l_left' layout='post'>
+    
+
+
+<header class="header">
+
+<div class="logo-wrap"><a class="avatar" href="/about/"><div class="bg" style="opacity:0;background-image:url(https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.2/avatar/round/rainbow64@3x.webp);"></div><img no-lazy class="avatar" src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/profile/avatar.jpg" onerror="javascript:this.classList.add('error');this.src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/image/2659360.svg';"></a><a class="title" href="/"><div class="main">リン屋</div><div class="sub cap">RinChanNOW's blog</div></a></div>
+<nav class="menu dis-select"><a class="nav-item active" href="/">博客</a><a class="nav-item" href="/about/">关于</a></nav></header>
+
+<div class="widgets">
+
+<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF-File-System-Access-API"><span class="toc-text">什么是 File System Access API</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%96%87%E7%AB%A0%E8%BF%9B%E5%BA%A6%EF%BC%88%E5%8E%9F%E6%96%87%E4%B8%AD%E5%B7%B2%E7%BB%8F%E5%85%A8%E9%83%A8%E5%AE%8C%E6%88%90%EF%BC%89"><span class="toc-text">文章进度（原文中已经全部完成）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BD%BF%E7%94%A8-File-System-Access-API"><span class="toc-text">使用 File System Access API</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%AF%95%E8%AF%95%E7%9C%8B"><span class="toc-text">试试看</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BB%8E%E6%9C%AC%E5%9C%B0%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E8%AF%BB%E5%8F%96%E4%B8%80%E4%B8%AA%E6%96%87%E4%BB%B6"><span class="toc-text">从本地文件系统读取一个文件</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E8%AE%A9%E7%94%A8%E6%88%B7%E9%80%89%E6%8B%A9%E4%B8%80%E4%B8%AA%E6%96%87%E4%BB%B6%E8%BF%9B%E8%A1%8C%E8%AF%BB%E5%8F%96"><span class="toc-text">让用户选择一个文件进行读取</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%BB%8E%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E4%B8%AD%E8%AF%BB%E5%8F%96%E4%B8%80%E4%B8%AA%E6%96%87%E4%BB%B6"><span class="toc-text">从文件系统中读取一个文件</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%B0%86%E4%B8%8A%E9%9D%A2%E7%9A%84%E6%93%8D%E4%BD%9C%E7%BB%84%E5%90%88%E5%88%B0%E4%B8%80%E8%B5%B7"><span class="toc-text">将上面的操作组合到一起</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B0%86%E6%96%87%E4%BB%B6%E5%86%99%E5%85%A5%E6%9C%AC%E5%9C%B0%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F"><span class="toc-text">将文件写入本地文件系统</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%88%9B%E5%BB%BA%E4%B8%80%E4%B8%AA%E6%96%B0%E6%96%87%E4%BB%B6"><span class="toc-text">创建一个新文件</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%BF%9D%E5%AD%98%E4%BF%AE%E6%94%B9%E5%88%B0%E6%9C%AC%E5%9C%B0%E7%A3%81%E7%9B%98"><span class="toc-text">保存修改到本地磁盘</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B0%86%E6%96%87%E4%BB%B6%E5%8F%A5%E6%9F%84%E5%AD%98%E5%85%A5%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="toc-text">将文件句柄存入数据库</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%89%93%E5%BC%80%E4%B8%80%E4%B8%AA%E7%9B%AE%E5%BD%95%E5%B9%B6%E5%88%97%E5%87%BA%E5%85%B6%E5%86%85%E5%AE%B9"><span class="toc-text">打开一个目录并列出其内容</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%96%B0%E5%BB%BA%E6%88%96%E8%80%85%E7%9B%AE%E5%BD%95%E4%B8%8B%E7%9A%84%E8%AE%BF%E9%97%AE%E6%96%87%E4%BB%B6%E5%92%8C%E6%96%87%E4%BB%B6%E5%A4%B9"><span class="toc-text">新建或者目录下的访问文件和文件夹</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A7%A3%E6%9E%90%E7%9B%AE%E5%BD%95%E4%B8%AD%E6%96%87%E4%BB%B6%E7%9A%84%E8%B7%AF%E5%BE%84"><span class="toc-text">解析目录中文件的路径</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%A0%E9%99%A4%E7%9B%AE%E5%BD%95%E4%B8%8B%E7%9A%84%E6%96%87%E4%BB%B6%E5%92%8C%E6%96%87%E4%BB%B6%E5%A4%B9"><span class="toc-text">删除目录下的文件和文件夹</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%9B%86%E6%88%90%E6%8B%96%E6%94%BE%EF%BC%88Drag-and-drop%EF%BC%89%E5%8A%9F%E8%83%BD"><span class="toc-text">集成拖放（Drag and drop）功能</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%AE%BF%E9%97%AE%E5%9F%9F%E7%A7%81%E6%9C%89%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%EF%BC%88the-origin-private-file-system%EF%BC%89"><span class="toc-text">访问域私有文件系统（the origin-private file system）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Polyfilling"><span class="toc-text">Polyfilling</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%89%E5%85%A8%E4%B8%8E%E6%9D%83%E9%99%90"><span class="toc-text">安全与权限</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%89%93%E5%BC%80%E6%96%87%E4%BB%B6%E6%88%96%E4%BF%9D%E5%AD%98%E6%96%B0%E6%96%87%E4%BB%B6"><span class="toc-text">打开文件或保存新文件</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E8%A2%AB%E9%99%90%E5%88%B6%E7%9A%84%E6%96%87%E4%BB%B6%E5%A4%B9"><span class="toc-text">被限制的文件夹</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9B%B4%E6%94%B9%E4%B8%80%E4%B8%AA%E5%B7%B2%E5%AD%98%E5%9C%A8%E7%9A%84%E6%96%87%E4%BB%B6%E6%88%96%E7%9B%AE%E5%BD%95"><span class="toc-text">更改一个已存在的文件或目录</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%9D%83%E9%99%90%E6%8F%90%E7%A4%BA"><span class="toc-text">权限提示</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%80%8F%E6%98%8E%E6%80%A7"><span class="toc-text">透明性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9D%83%E9%99%90%E6%9C%89%E6%95%88%E6%9C%9F"><span class="toc-text">权限有效期</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8F%8D%E9%A6%88"><span class="toc-text">反馈</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%88%91%E8%87%AA%E5%B7%B1%E6%83%B3%E8%AF%B4%E7%9A%84%E8%AF%9D"><span class="toc-text">我自己想说的话</span></a></li></ol></div></div></div>
+
+
+</div>
+
+
+    </aside>
+    <div class='l_main'>
+      
+
+      
+
+
+<div class="bread-nav fs12"><div id="breadcrumb"><a class="cap breadcrumb" href="/">主页</a><span class="sep"></span><a class="cap breadcrumb" href="/">文章</a><span class="sep"></span><a class="cap breadcrumb-link" href="/blog/categories/%E7%BC%96%E7%A8%8B%E5%BC%80%E5%8F%91/">编程开发</a></div><div id="post-meta">发布于&nbsp;<time datetime="2020-12-23T06:31:44.000Z">2020-12-23</time></div></div>
+
+<article class='content md post'>
+<h1 class="article-title"><span>File System Access API：简化访问本地文件</span></h1>
+<p>原文章：<a target="_blank" rel="noopener" href="https://web.dev/file-system-access/">https://web.dev/file-system-access/</a></p>
+<p>原作者：Thomas Steiner（<a target="_blank" rel="noopener" href="https://twitter.com/tomayac">@tomayac</a>）已同意转载。</p>
+<span id="more"></span>
+
+<h2 id="什么是-File-System-Access-API"><a href="#什么是-File-System-Access-API" class="headerlink" title="什么是 File System Access API"></a>什么是 File System Access API</h2><p>File System Access API（<a target="_blank" rel="noopener" href="https://wicg.github.io/file-system-access/">The File System Access API</a>，之前又叫 Native File System API，更之前叫 Writeable Files API）使得开发者们能够构建能与用户本地设备文件交互的强大 Web 应用，比如 IDE、图像视频编辑器、文本编辑器等。一旦用户允许了 Web 应用访问本地文件的请求，此 API 便可以使 Web 应用直接对用户设备上的文件和文件夹进行读写修改。除了读写文件， File System Access API 还提供了打开目录以及列举目录内容的能力。</p>
+<p>如果你曾经操作过文件读写，那你会很熟悉我下面分享的内容。不过我还是鼓励你读一下这篇文章，因为不是所有的系统都是类似的。</p>
+<p><strong>（原作者注：对于 File System Access API 的设计与实现我们进行了深思熟虑，以确保人们能够轻松的管理他们的文件。查看 <a href="##%E5%AE%89%E5%85%A8%E4%B8%8E%E6%9D%83%E9%99%90">安全与权限</a> 部分来获取更多信息。)</strong></p>
+<h2 id="文章进度（原文中已经全部完成）"><a href="#文章进度（原文中已经全部完成）" class="headerlink" title="文章进度（原文中已经全部完成）"></a>文章进度（原文中已经全部完成）</h2><p>前往 <a target="_blank" rel="noopener" href="https://web.dev/file-system-access/#status">https://web.dev/file-system-access/#status</a> 查看</p>
+<h2 id="使用-File-System-Access-API"><a href="#使用-File-System-Access-API" class="headerlink" title="使用 File System Access API"></a>使用 File System Access API</h2><p>为了展示 File System Access API 的强大与好用，我写了一个单文件<a target="_blank" rel="noopener" href="https://googlechromelabs.github.io/text-editor/">文本编辑器</a>。它可以让你打开一个文本文件，编辑它，将修改保存回本地，或者新建一个文件然后保存修改到本地。这并不是什么精致（fancy）的东西，但它足以帮你理解概念。</p>
+<h3 id="试试看"><a href="#试试看" class="headerlink" title="试试看"></a>试试看</h3><p>看看 File System Access API 在<a target="_blank" rel="noopener" href="https://googlechromelabs.github.io/text-editor/">文本编辑器</a> demo 中的表现。</p>
+<h3 id="从本地文件系统读取一个文件"><a href="#从本地文件系统读取一个文件" class="headerlink" title="从本地文件系统读取一个文件"></a>从本地文件系统读取一个文件</h3><p>我想要做的第一件事是让用户选择一个文件，然后打开并从磁盘上读取这个文件。</p>
+<h4 id="让用户选择一个文件进行读取"><a href="#让用户选择一个文件进行读取" class="headerlink" title="让用户选择一个文件进行读取"></a>让用户选择一个文件进行读取</h4><p>File System Access API 中的入口点（entry point）是 <a target="_blank" rel="noopener" href="https://wicg.github.io/file-system-access/#api-showopenfilepicker"><code>window.showOpenFilePicker()</code></a>。当调用它时，浏览器会弹出一个文件选择对话框，并让用户选择一个文件。用户选择完文件后，此 API 会返回一个文件句柄（handle）数组。<code>option</code> 参数可以让你影响文件选择器的行为，比如允许用户选择多个文件，目录或者其他文件类型。如果你没有指定 <code>option</code> 参数，选择器只让用户选择一个文件。这对于一个文本编辑器来说恰到好处。</p>
+<p>和众多强大的 API 一样，必须在一个<a target="_blank" rel="noopener" href="https://w3c.github.io/webappsec-secure-contexts/">安全上下文（secure context）</a>中完成对 <code>showOpenFilePicker()</code> 的调用并且只能在一个 user gesture（详见 Chromium 对此的定义） 中被调用。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">let</span> fileHandle;</span><br><span class="line">butOpenFile.addEventListener(<span class="string">&#x27;click&#x27;</span>, <span class="keyword">async</span> () =&gt; &#123;</span><br><span class="line">  <span class="comment">// Destructure the one-element array.</span></span><br><span class="line">  [fileHandle] = <span class="keyword">await</span> <span class="built_in">window</span>.showOpenFilePicker();</span><br><span class="line">  <span class="comment">// Do something with the file handle.</span></span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>一旦用户选择了一个文件，<code>showOpenFilePicker()</code> 会返回一个句柄数组，在这种情况下会返回一个只有一个 <a target="_blank" rel="noopener" href="https://wicg.github.io/file-system-access/#api-filesystemfilehandle"><code>FileSystemFileHandle</code></a>  对象的数组，这个对象包含了需要和文件进行交互的属性和方法。</p>
+<p>我们需要维护一个对此句柄的引用以便后续使用，我们需要用它来进行保存文件或者其他文件操作。</p>
+<h4 id="从文件系统中读取一个文件"><a href="#从文件系统中读取一个文件" class="headerlink" title="从文件系统中读取一个文件"></a>从文件系统中读取一个文件</h4><p>现在你有了一个文件的句柄，这下你就能够拿到这个文件的属性或者访问这个文件本身。现在，我会简单地读读取它的内容。调用 <code>handle.getFile</code> 并返回一个 <a target="_blank" rel="noopener" href="https://w3c.github.io/FileAPI/"><code>File</code></a> 对象，它包含一个二进制文件（blob）。为了拿到二进制文件中的数据，调用<a target="_blank" rel="noopener" href="https://developer.mozilla.org/en-US/docs/Web/API/Blob">它的方法</a>（<code>slice()</code> , <code>stream()</code>, <code>text()</code>, <code>arrayBuffer()</code>）。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> file = <span class="keyword">await</span> fileHandle.getFile();</span><br><span class="line"><span class="keyword">const</span> contents = <span class="keyword">await</span> file.text();</span><br></pre></td></tr></table></figure>
+
+<p><code>FileSystemFileHandle.getFile()</code> 返回的 <code>File</code> 对象只有对应的底层文件没有后被更改时可读。如果底层文件已经被修改饿了，那此 <code>File</code> 对象便会变为不可读，这时候你得重新调用 <code>getFile()</code> 来获取新的 <code>File</code> 对象来读取被更改的数据。</p>
+<h4 id="将上面的操作组合到一起"><a href="#将上面的操作组合到一起" class="headerlink" title="将上面的操作组合到一起"></a>将上面的操作组合到一起</h4><p>当用户点击打开（Open）按钮，浏览器会弹出文件选择器。当选中一个文件，这个应用会把读到的内容放入一个 <code>&lt;textarea&gt;</code> 中。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">let</span> fileHandle;</span><br><span class="line">butOpenFile.addEventListener(<span class="string">&#x27;click&#x27;</span>, <span class="keyword">async</span> () =&gt; &#123;</span><br><span class="line">  [fileHandle] = <span class="keyword">await</span> <span class="built_in">window</span>.showOpenFilePicker();</span><br><span class="line">  <span class="keyword">const</span> file = <span class="keyword">await</span> fileHandle.getFile();</span><br><span class="line">  <span class="keyword">const</span> contents = <span class="keyword">await</span> file.text();</span><br><span class="line">  textArea.value = contents;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<h3 id="将文件写入本地文件系统"><a href="#将文件写入本地文件系统" class="headerlink" title="将文件写入本地文件系统"></a>将文件写入本地文件系统</h3><p>在这个文本编辑器中，有两种方式来保存文件：<strong>保存（Save）</strong>和<strong>另存为（Save As）</strong>。<strong>保存</strong>使用之前的文件句柄简单地将修改写回原文件中。但是<strong>另存为</strong>创建了一个新的文件，并需要一个新的文件句柄。</p>
+<h4 id="创建一个新文件"><a href="#创建一个新文件" class="headerlink" title="创建一个新文件"></a>创建一个新文件</h4><p>为了保存一个文件，我们需要调用 <code>showSaveFilePicker()</code> 来让文件选择器变为“保存”模式，此模式下，文件选择器让用户选择一个文件来进行保存。在这个文件编辑器中，我想让它自动加上 <code>.txt</code> 的扩展名，所以我提供了一些额外的参数。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="function"><span class="keyword">function</span> <span class="title">getNewFileHandle</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">  <span class="keyword">const</span> options = &#123;</span><br><span class="line">    <span class="attr">types</span>: [</span><br><span class="line">      &#123;</span><br><span class="line">        <span class="attr">description</span>: <span class="string">&#x27;Text Files&#x27;</span>,</span><br><span class="line">        <span class="attr">accept</span>: &#123;</span><br><span class="line">          <span class="string">&#x27;text/plain&#x27;</span>: [<span class="string">&#x27;.txt&#x27;</span>],</span><br><span class="line">        &#125;,</span><br><span class="line">      &#125;,</span><br><span class="line">    ],</span><br><span class="line">  &#125;;</span><br><span class="line">  <span class="keyword">const</span> handle = <span class="keyword">await</span> <span class="built_in">window</span>.showSaveFilePicker(options);</span><br><span class="line">  <span class="keyword">return</span> handle;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="保存修改到本地磁盘"><a href="#保存修改到本地磁盘" class="headerlink" title="保存修改到本地磁盘"></a>保存修改到本地磁盘</h4><p>你可以 <a href="https://github.com/GoogleChromeLabs/text-editor/">Github</a> 上找到我这个<a target="_blank" rel="noopener" href="https://googlechromelabs.github.io/text-editor/">文本编辑器</a> demo 的所有代码。核心的文件系统交互部分在 <code>fs-helpers.js</code> 中。简单来说，整个过程如以下代码所示。我会一步一步地进行解释。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="function"><span class="keyword">function</span> <span class="title">writeFile</span>(<span class="params">fileHandle, contents</span>) </span>&#123;</span><br><span class="line">  <span class="comment">// Create a FileSystemWritableFileStream to write to.</span></span><br><span class="line">  <span class="keyword">const</span> writable = <span class="keyword">await</span> fileHandle.createWritable();</span><br><span class="line">  <span class="comment">// Write the contents of the file to the stream.</span></span><br><span class="line">  <span class="keyword">await</span> writable.write(contents);</span><br><span class="line">  <span class="comment">// Close the file and write the contents to disk.</span></span><br><span class="line">  <span class="keyword">await</span> writable.close();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>向磁盘中写入数据需要利用 <a target="_blank" rel="noopener" href="https://wicg.github.io/file-system-access/#api-filesystemwritablefilestream"><code>FileSystemWritableFileStream</code></a> 对象，其本质是一个  <a target="_blank" rel="noopener" href="https://developer.mozilla.org/en-US/docs/Web/API/WritableStream"><code>WritableStream</code></a>。调用 <code>createWritable()</code> 为文件句柄对象创建文件流（stream）。调用 <code>createWritable()</code> 后，浏览器会先向用户请求文件的写权限。如果你拒绝了此请求，<code>createWritable()</code> 会抛出异常 <code>DOMException</code>，你的应用也没办法写这个文件。在这个文件编辑器中，<code>saveFile()</code> 方法会处理这些 <code>DOMException</code> 异常。</p>
+<p>你可以从文件编辑器中获取你要写的字符串（string）作为 <code>write()</code> 方法的参数传入。也可以直接获取 <a target="_blank" rel="noopener" href="https://developer.mozilla.org/en-US/docs/Web/API/BufferSource">BufferSource</a> 或者 <a target="_blank" rel="noopener" href="https://developer.mozilla.org/en-US/docs/Web/API/Blob">Blob</a>。例如，你可以直接向文件传输数据流（pipe a stream）：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="function"><span class="keyword">function</span> <span class="title">writeURLToFile</span>(<span class="params">fileHandle, url</span>) </span>&#123;</span><br><span class="line">  <span class="comment">// Create a FileSystemWritableFileStream to write to.</span></span><br><span class="line">  <span class="keyword">const</span> writable = <span class="keyword">await</span> fileHandle.createWritable();</span><br><span class="line">  <span class="comment">// Make an HTTP request for the contents.</span></span><br><span class="line">  <span class="keyword">const</span> response = <span class="keyword">await</span> fetch(url);</span><br><span class="line">  <span class="comment">// Stream the response into the file.</span></span><br><span class="line">  <span class="keyword">await</span> response.body.pipeTo(writable);</span><br><span class="line">  <span class="comment">// pipeTo() closes the destination pipe by default, no need to close it.</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>你可以在文件流中使用 <a target="_blank" rel="noopener" href="https://wicg.github.io/file-system-access/#api-filesystemwritablefilestream-seek"><code>seek()</code></a> 或者 <a target="_blank" rel="noopener" href="https://wicg.github.io/file-system-access/#api-filesystemwritablefilestream-truncate"><code>truncate()</code></a> 方法来精确定位文件中的位置，或者改变文件的大小。</p>
+<p><strong>（原作者提醒：直到文件流关闭前修改都不会写入磁盘，可以通过调用 <code>close()</code> 或者等文件流自动关闭）</strong></p>
+<h3 id="将文件句柄存入数据库"><a href="#将文件句柄存入数据库" class="headerlink" title="将文件句柄存入数据库"></a>将文件句柄存入数据库</h3><p>文件句柄是可以序列化的，这意味着你可以将它们存入数据库中，或者调用 <code>postMessage()</code> 在相同的域（the same top-level origin）中传递它们。</p>
+<p>将文件句柄存入数据库意味着你可以存储状态，或者记录下用户在使用哪些文件。这让你可以拥有一个最近打开或编辑过的文件列表，或者可以提供打开最近使用的文件的功能等等。在这个文本编辑器中，我将用户最近打开的五个文件存了起来，让用户能够方便地重新选择这些文件。</p>
+<p>在不同会话（session）中文件地访问权限是不能持续存在的，所以你应该使用 <code>queryPermission()</code> 来检验用户是否允许对某文件的访问。如果没有，使用 <code>requestPermission()</code> 来重新请求。</p>
+<p>在上面这个文本编辑器中，我定义了一个 <code>verifyPermission()</code> 方法来检查用户是否已经授予了权限， 如果没有，就会请求。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="function"><span class="keyword">function</span> <span class="title">verifyPermission</span>(<span class="params">fileHandle, readWrite</span>) </span>&#123;</span><br><span class="line">  <span class="keyword">const</span> options = &#123;&#125;;</span><br><span class="line">  <span class="keyword">if</span> (readWrite) &#123;</span><br><span class="line">    options.mode = <span class="string">&#x27;readwrite&#x27;</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// Check if permission was already granted. If so, return true.</span></span><br><span class="line">  <span class="keyword">if</span> ((<span class="keyword">await</span> fileHandle.queryPermission(options)) === <span class="string">&#x27;granted&#x27;</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// Request permission. If the user grants permission, return true.</span></span><br><span class="line">  <span class="keyword">if</span> ((<span class="keyword">await</span> fileHandle.requestPermission(options)) === <span class="string">&#x27;granted&#x27;</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// The user didn&#x27;t grant permission, so return false.</span></span><br><span class="line">  <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过在读请求时申请写权限，我减少了请求权限的次数：打开一个文件时用户只用允许一次，便可以同时授予应用读写权限。</p>
+<h3 id="打开一个目录并列出其内容"><a href="#打开一个目录并列出其内容" class="headerlink" title="打开一个目录并列出其内容"></a>打开一个目录并列出其内容</h3><p>要列出目录下的所有文件，需要调用 <a target="_blank" rel="noopener" href="https://wicg.github.io/file-system-access/#api-showdirectorypicker"><code>showDirectoryPicker()</code> </a>。用户在我呢见选择器中选择一个目录，然后会返回一个 <a target="_blank" rel="noopener" href="https://wicg.github.io/file-system-access/#api-filesystemdirectoryhandle"><code>FileSystemDirectoryHandle</code></a>，这个句柄对象能让你列举并访问目录中的文件。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> butDir = <span class="built_in">document</span>.getElementById(<span class="string">&#x27;butDirectory&#x27;</span>);</span><br><span class="line">butDir.addEventListener(<span class="string">&#x27;click&#x27;</span>, <span class="keyword">async</span> () =&gt; &#123;</span><br><span class="line">  <span class="keyword">const</span> dirHandle = <span class="keyword">await</span> <span class="built_in">window</span>.showDirectoryPicker();</span><br><span class="line">  <span class="keyword">for</span> <span class="keyword">await</span> (<span class="keyword">const</span> entry <span class="keyword">of</span> dirHandle.values()) &#123;</span><br><span class="line">    <span class="built_in">console</span>.log(entry.kind, entry.name);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<h3 id="新建或者目录下的访问文件和文件夹"><a href="#新建或者目录下的访问文件和文件夹" class="headerlink" title="新建或者目录下的访问文件和文件夹"></a>新建或者目录下的访问文件和文件夹</h3><p>通过目录的句柄，你可以通过使用 <a target="_blank" rel="noopener" href="https://wicg.github.io/file-system-access/#dom-filesystemdirectoryhandle-getfilehandle"><code>getFileHandle()</code></a> 与 <a target="_blank" rel="noopener" href="https://wicg.github.io/file-system-access/#dom-filesystemdirectoryhandle-getdirectoryhandle"><code>getDirectoryHandle()</code></a> 创建或者访问文件和文件夹。你可以通过传入一个额外的 <code>option</code> 对象，并带有一个布尔类型的 <code>create</code> 字段，来决定如果文件或文件夹不存在时是否创建一个新的。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// In an existing directory, create a new directory named &quot;My Documents&quot;.</span></span><br><span class="line"><span class="keyword">const</span> newDirectoryHandle = <span class="keyword">await</span> existingDirectoryHandle.getDirectoryHandle(<span class="string">&#x27;My Documents&#x27;</span>, &#123;</span><br><span class="line">  <span class="attr">create</span>: <span class="literal">true</span>,</span><br><span class="line">&#125;);</span><br><span class="line"><span class="comment">// In this new directory, create a file named &quot;My Notes.txt&quot;.</span></span><br><span class="line"><span class="keyword">const</span> newFileHandle = <span class="keyword">await</span> newDirectoryHandle.getFileHandle(<span class="string">&#x27;My Notes.txt&#x27;</span>, &#123; <span class="attr">create</span>: <span class="literal">true</span> &#125;);</span><br></pre></td></tr></table></figure>
+
+<h3 id="解析目录中文件的路径"><a href="#解析目录中文件的路径" class="headerlink" title="解析目录中文件的路径"></a>解析目录中文件的路径</h3><p>当你正在处理目录下的文件或文件夹时，解析它们的路径会对你很有用。这个操作可以通过调用 <a target="_blank" rel="noopener" href="https://wicg.github.io/file-system-access/#api-filesystemdirectoryhandle-resolve"><code>resolve()</code></a> 实现。被解析的文件可以是目录的直接子女或者间接子女。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Resolve the path of the previously created file called &quot;My Notes.txt&quot;.</span></span><br><span class="line"><span class="keyword">const</span> path = <span class="keyword">await</span> newDirectoryHandle.resolve(newFileHandle);</span><br><span class="line"><span class="comment">// `path` is now [&quot;My Documents&quot;, &quot;My Notes.txt&quot;]</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="删除目录下的文件和文件夹"><a href="#删除目录下的文件和文件夹" class="headerlink" title="删除目录下的文件和文件夹"></a>删除目录下的文件和文件夹</h3><p>如果你获取了访问一个目录的权限，那你就能够使用 <a target="_blank" rel="noopener" href="https://wicg.github.io/file-system-access/#dom-filesystemdirectoryhandle-removeentry"><code>removeEntry()</code></a> 来删除它下面的文件与文件夹。删除文件夹时，你可以选择递归删除其所有子文件及其包含的文件。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Delete a file.</span></span><br><span class="line"><span class="keyword">await</span> directoryHandle.removeEntry(<span class="string">&#x27;Abandoned Masterplan.txt&#x27;</span>);</span><br><span class="line"><span class="comment">// Recursively delete a folder.</span></span><br><span class="line"><span class="keyword">await</span> directoryHandle.removeEntry(<span class="string">&#x27;Old Stuff&#x27;</span>, &#123; <span class="attr">recursive</span>: <span class="literal">true</span> &#125;);</span><br></pre></td></tr></table></figure>
+
+<h3 id="集成拖放（Drag-and-drop）功能"><a href="#集成拖放（Drag-and-drop）功能" class="headerlink" title="集成拖放（Drag and drop）功能"></a>集成拖放（Drag and drop）功能</h3><p><a target="_blank" rel="noopener" href="https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API">HTML Drag and Drop interfaces</a> 让 Web 应用可以接受直接将文件拖放到网页中。在拖放操作中，拖拽文件或目录项将分别关联到文件或目录项的入口（entry）。当拖拽文件时，<code>DataTransferItem.getAsFileSystemHandle()</code> 方法会返回一个包含 <code>FileSystemFileHandle</code> 对象的 promise 对象，当拖拽目录时，一个包含 <code>FileSystemDirectoryHandle</code> 对象的 promise 对象。下面的代码展示了这一过程。注意，无论是文件还是目录， Drag and Drop interface 中的  <a target="_blank" rel="noopener" href="https://developer.mozilla.org/en-US/docs/Web/API/DataTransferItem/kind"><code>DataTransferItem.kind</code></a> 都是 <code>&quot;file&quot;</code> ，然而 File System Access API 中的  <a target="_blank" rel="noopener" href="https://wicg.github.io/file-system-access/#dom-filesystemhandle-kind"><code>FileSystemHandle.kind</code></a>  会区分为 <code>&quot;file&quot;</code> 和 <code>&quot;direcotry&quot;</code>。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">elem.addEventListener(<span class="string">&#x27;dragover&#x27;</span>, <span class="function">(<span class="params">e</span>) =&gt;</span> &#123;</span><br><span class="line">  <span class="comment">// Prevent navigation.</span></span><br><span class="line">  e.preventDefault();</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line">elem.addEventListener(<span class="string">&#x27;drop&#x27;</span>, <span class="keyword">async</span> (e) =&gt; &#123;</span><br><span class="line">  <span class="comment">// Prevent navigation.</span></span><br><span class="line">  e.preventDefault();</span><br><span class="line">  <span class="comment">// Process all of the items.</span></span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">const</span> item <span class="keyword">of</span> e.dataTransfer.items) &#123;</span><br><span class="line">    <span class="comment">// Careful: `kind` will be &#x27;file&#x27; for both file</span></span><br><span class="line">    <span class="comment">// _and_ directory entries.</span></span><br><span class="line">    <span class="keyword">if</span> (item.kind === <span class="string">&#x27;file&#x27;</span>) &#123;</span><br><span class="line">      <span class="keyword">const</span> entry = <span class="keyword">await</span> item.getAsFileSystemHandle();</span><br><span class="line">      <span class="keyword">if</span> (entry.kind === <span class="string">&#x27;directory&#x27;</span>) &#123;</span><br><span class="line">        handleDirectoryEntry(entry);</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        handleFileEntry(entry);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<h3 id="访问域私有文件系统（the-origin-private-file-system）"><a href="#访问域私有文件系统（the-origin-private-file-system）" class="headerlink" title="访问域私有文件系统（the origin-private file system）"></a>访问域私有文件系统（the origin-private file system）</h3><p>如这个名字所说，域私有文件系统是网页的域私有的存储端点（注：也就是说这个文件系统是这个网页独有的，你刷新页面就变成一个新的了）。浏览器通常将网页的域私有文件系统中的内容存在磁盘的某个位置，但是不会让你轻易找到。显然，你在你电脑真实的文件系统上也是找不到相应名字的域私有文件系统的内容的。浏览器只是让它看起来像个文件系统罢了，事实上这些文件可能存储在数据库或者其他数据结构中。重要的事再说一遍：当你使用这个 API（指域私有文件系统的）的时候，不要指望能在你的硬盘上找到1：1的对应。拿到域私有文件系统根目录（root）的 <code>FileSystemDirectoryHandle</code> 之后，你可以像操作普通文件系统一样操作它。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> root = <span class="keyword">await</span> navigator.storage.getDirectory();</span><br><span class="line"><span class="comment">// Create a new file handle.</span></span><br><span class="line"><span class="keyword">const</span> fileHandle = <span class="keyword">await</span> root.getFileHandle(<span class="string">&#x27;Untitled.txt&#x27;</span>, &#123; <span class="attr">create</span>: <span class="literal">true</span> &#125;);</span><br><span class="line"><span class="comment">// Create a new directory handle.</span></span><br><span class="line"><span class="keyword">const</span> dirHandle = <span class="keyword">await</span> root.getDirectoryHandle(<span class="string">&#x27;New Folder&#x27;</span>, &#123; <span class="attr">create</span>: <span class="literal">true</span> &#125;);</span><br><span class="line"><span class="comment">// Recursively remove a directory.</span></span><br><span class="line"><span class="keyword">await</span> root.removeEntry(<span class="string">&#x27;Old Stuff&#x27;</span>, &#123; <span class="attr">recursive</span>: <span class="literal">true</span> &#125;);</span><br></pre></td></tr></table></figure>
+
+<h2 id="Polyfilling"><a href="#Polyfilling" class="headerlink" title="Polyfilling"></a>Polyfilling</h2><p>(注：Polyfill 为 Web 开发者中的黑话，大致意思是实现浏览器不支持的原生 API 代码。具体意义请自行 Google。)</p>
+<p>我们也可以自己实现一些 File System Access API 中的方法。</p>
+<ul>
+<li><code>showOpenFilePicker()</code> 可以约等于 <code>&lt;input type=&quot;file&quot;&gt;</code> 元素。</li>
+<li><code>showSaveFilePicker()</code> 可以通过 <code>&lt;a download=&quot;file_name&quot;</code> 元素来模拟，但是尽管这个可以触发下载，但是它不允许覆盖已存在的文件。</li>
+<li><code>showDirectoryPicker()</code> 可以通过 <code>&lt;input type=&quot;file&quot; webkitdirectory&gt;</code> 元素来模拟。（不过这个未被标准化）</li>
+</ul>
+<p>我们开发了一个叫  <a target="_blank" rel="noopener" href="https://web.dev/browser-nativefs/">browser-nativefs</a> 的库来尽可能地使用 File System Access API， 如果你无法使用，你可以使用上述的次优方案。</p>
+<h2 id="安全与权限"><a href="#安全与权限" class="headerlink" title="安全与权限"></a>安全与权限</h2><p>Chrome 团队设计和实现 File System Access API 的核心原则定义在  <a target="_blank" rel="noopener" href="https://chromium.googlesource.com/chromium/src/+/lkgr/docs/security/permissions-for-powerful-web-platform-features.md">Controlling Access to Powerful Web Platform Features</a> 中，包括了用户控制、透明度和用户工效（ ergonomics）几方面。</p>
+<h3 id="打开文件或保存新文件"><a href="#打开文件或保存新文件" class="headerlink" title="打开文件或保存新文件"></a>打开文件或保存新文件</h3><p>当打开一个文件，用户通过文件选择器提供读文件或目录的权限。文件选择器只能在  <a target="_blank" rel="noopener" href="https://w3c.github.io/webappsec-secure-contexts/">secure context</a> 中通过 user gesture 触发（注：就是需要用户自己点击才能弹出文件选择器）。如果用户不想打开了，他们可以直接取消，然后网站拿不到任何访问权限。这个和 <code>&lt;input type=&quot;file&quot;&gt;</code> 是一样的。</p>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://webdev.imgix.net/file-system-access/fs-open.jpg" alt="File picker to open a file for reading"></p>
+<p>同样的，当一个 Web 应用想要保存一个新文件，浏览器也会弹出一个保存文件的选择器，让用户选择保存的文件名和路径。当用户保存一个新文件（或者覆盖一个老文件），文件选择器会授予应用对这个文件的写权限。</p>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://webdev.imgix.net/file-system-access/fs-save.jpg" alt="File picker to save a file to disk."></p>
+<h4 id="被限制的文件夹"><a href="#被限制的文件夹" class="headerlink" title="被限制的文件夹"></a>被限制的文件夹</h4><p>为了保护用户和他们的数据，浏览器可能会限制用户访问特定文件夹的能力，比如核心的操作系统文件夹。出现这种情况时，浏览器会弹窗提示用户另选一个文件夹。</p>
+<h3 id="更改一个已存在的文件或目录"><a href="#更改一个已存在的文件或目录" class="headerlink" title="更改一个已存在的文件或目录"></a>更改一个已存在的文件或目录</h3><p>Web 应用只有得到用户明确的允许之后才能更改本地文件。</p>
+<h4 id="权限提示"><a href="#权限提示" class="headerlink" title="权限提示"></a>权限提示</h4><p>当用户想要保存修改到有读权限的本地文件时，浏览去会弹出提示为整个网站询求这个文件的写权限。这个权限请求只能被 user gesture 触发，比如按下保存按钮。</p>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://webdev.imgix.net/file-system-access/fs-save-permission-crop.jpg" alt="Permission prompt shown prior to saving a file."></p>
+<p>另外，一些编辑多文件的 Web 应用（比如 IDE），可能在打开文件的时候就请求保存修改的权限。</p>
+<p>如果用户选择取消（Cancle），Web 应用就没办法保存修改到本地。应该提供其他让用户保存他们数据的方法，比如提供  <a target="_blank" rel="noopener" href="https://developers.google.com/web/updates/2011/08/Downloading-resources-in-HTML5-a-download">“download” the file</a> 这样的链接，或者保存数据到云端等等。</p>
+<h3 id="透明性"><a href="#透明性" class="headerlink" title="透明性"></a>透明性</h3><p>用户授予 Web 应用保存文件的权限后，浏览器的 URL 栏上会显示一个图标。点击这个图标会弹出一个可访问文件列表。用户可以选择撤销对某些文件的权限。</p>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://webdev.imgix.net/file-system-access/fs-save-icon.jpg" alt="Omnibox icon"></p>
+<h3 id="权限有效期"><a href="#权限有效期" class="headerlink" title="权限有效期"></a>权限有效期</h3><p>只要你不关闭这个域下的所有标签页，Web 应用就可以保持已有的权限。一旦你关闭了所有标签页，网站就会失去所有的访问权限。用户下次再打开这个 Web 应用，就需要重新按照提示赋予文件访问权限。</p>
+<h3 id="反馈"><a href="#反馈" class="headerlink" title="反馈"></a>反馈</h3><p>如果你想对 API 的设计者说点什么，有问题，或者想反馈 BUG，请前往原网站进行下一步的操作。<a target="_blank" rel="noopener" href="https://web.dev/file-system-access/#feedback">https://web.dev/file-system-access/#feedback</a></p>
+<h2 id="我自己想说的话"><a href="#我自己想说的话" class="headerlink" title="我自己想说的话"></a>我自己想说的话</h2><p>这应该是目前为止（2020-12-26）我写的最长的一篇博客了吧，虽然全文的都是翻译的别人的文章。。。我是用这个 File System Access API 的起因是我在公司实习突然接盘了一个搁置了半年的项目，然后这个项目由于没有客户端人力，所以就然我暂时赶出一版 Web 应用来完成大致的功能（虽然我是后端开发）。由于有访问本地文件的需求，我通过 Google 找到了这个不久前才更新的 Chrome API（版本 83），还真是及时。。不过到本文完成的时候，我已经转向 Electron 开发了，也就是说，这个 API 其实我已经放弃使用了。作为浏览器提供的  API，它的功能真的有很大的局限性，不过如果要写一个在线的编辑器啥的是真的很方便。</p>
+<p>作为浏览器上的网页应用，确实要在安全性和方便性之间做出取舍，像这个 API 就没办法直接获取本地文件系统的信息，不像 node 的 fs 模块，这也是我最后又选择重构为 Electron 的原因。。。</p>
+<p>找了一份后台开发的实习，但我怎么感觉在前端和客户端开发的道路上越走越远了呢。。而且也没有人系统地带我，全靠自己摸索。。。我这实习真的有什么大的意义吗（除了恰烂钱）。。。</p>
+
+
+<div class="article-footer reveal fs14"><section id="license"><div class="header"><span>许可协议</span></div><div class="body"><p>本文采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">署名-非商业性使用-相同方式共享 4.0 国际</a> 许可协议，转载请注明出处。</p>
+</div></section></div>
+
+</article>
+
+<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/web-usb-connector/">使用 Chrome 浏览器连接 USB 设备<span class="note">较早</span></a><div class="line"></div><a id="prev" href="/socket-io-issues/">Socket.io 踩坑记录<span class="note">较新</span></a><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
+
+
+
+
+
+
+
+
+      
+<footer class="page-footer reveal fs12"><hr><div class="text"><p>本博客所有文章除特别声明外，均采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> 许可协议，转载请注明出处。</p>
+<p>本站由 <a href="https://github.com/RinChanNOWWW/">@RinChanNOW</a> 创建，使用 <a href="https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0" title="v1.5.0">Stellar</a> 作为主题。</p>
+</div></footer>
+
+      <div class='float-panel mobile-only blur' style='display:none'>
+  <button type='button' class='sidebar-toggle mobile' onclick='sidebar.toggle()'>
+    <svg class="icon" style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="15301"><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 2.3 26.8 24.6 47.5 51.6 47.6h416.5v4z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15302"></path><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 1.9 27.7 23.9 49.7 51.6 51.6h416.5z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15303"></path></svg>
+  </button>
+</div>
+
+    </div>
+  </div>
+  <div class='scripts'>
+    <script type="text/javascript">
+  stellar = {
+    // 懒加载 css https://github.com/filamentgroup/loadCSS
+    loadCSS: (href, before, media, attributes) => {
+      var doc = window.document;
+      var ss = doc.createElement("link");
+      var ref;
+      if (before) {
+        ref = before;
+      } else {
+        var refs = (doc.body || doc.getElementsByTagName("head")[0]).childNodes;
+        ref = refs[refs.length - 1];
+      }
+      var sheets = doc.styleSheets;
+      if (attributes) {
+        for (var attributeName in attributes) {
+          if (attributes.hasOwnProperty(attributeName)) {
+            ss.setAttribute(attributeName, attributes[attributeName]);
+          }
+        }
+      }
+      ss.rel = "stylesheet";
+      ss.href = href;
+      ss.media = "only x";
+      function ready(cb) {
+        if (doc.body) {
+          return cb();
+        }
+        setTimeout(function () {
+          ready(cb);
+        });
+      }
+      ready(function () {
+        ref.parentNode.insertBefore(ss, before ? ref : ref.nextSibling);
+      });
+      var onloadcssdefined = function (cb) {
+        var resolvedHref = ss.href;
+        var i = sheets.length;
+        while (i--) {
+          if (sheets[i].href === resolvedHref) {
+            return cb();
+          }
+        }
+        setTimeout(function () {
+          onloadcssdefined(cb);
+        });
+      };
+      function loadCB() {
+        if (ss.addEventListener) {
+          ss.removeEventListener("load", loadCB);
+        }
+        ss.media = media || "all";
+      }
+      if (ss.addEventListener) {
+        ss.addEventListener("load", loadCB);
+      }
+      ss.onloadcssdefined = onloadcssdefined;
+      onloadcssdefined(loadCB);
+      return ss;
+    },
+
+    // 从 butterfly 和 volantis 获得灵感
+    loadScript: (src, opt) => new Promise((resolve, reject) => {
+      var script = document.createElement('script');
+      script.src = src;
+      if (opt) {
+        for (let key of Object.keys(opt)) {
+          script[key] = opt[key]
+        }
+      } else {
+        // 默认异步，如果需要同步，第二个参数传入 {} 即可
+        script.async = true
+      }
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    }),
+
+    // https://github.com/jerryc127/hexo-theme-butterfly
+    jQuery: (fn) => {
+      if (typeof jQuery === 'undefined') {
+        stellar.loadScript(stellar.plugins.jQuery).then(fn)
+      } else {
+        fn()
+      }
+    }
+  };
+  stellar.github = 'https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0';
+  stellar.config = {
+    date_suffix: {
+      just: '刚刚',
+      min: '分钟前',
+      hour: '小时前',
+      day: '天前',
+      month: '个月前',
+    },
+  };
+
+  // required plugins (only load if needs)
+  stellar.plugins = {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js',
+    sitesjs: '/js/plugins/sites.js',
+    friendsjs: '/js/plugins/friends.js',
+  };
+
+  // optional plugins
+  if ('true' == 'true') {
+    stellar.plugins.lazyload = Object.assign({"enable":true,"js":"https://cdn.jsdelivr.net/npm/vanilla-lazyload@17.3.1/dist/lazyload.min.js","transition":"blur"});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.swiper = Object.assign({"enable":true,"css":"https://unpkg.com/swiper/swiper-bundle.min.css","js":"https://unpkg.com/swiper/swiper-bundle.min.js"});
+  }
+  if ('' == 'true') {
+    stellar.plugins.scrollreveal = Object.assign({"enable":null,"js":"https://cdn.jsdelivr.net/npm/scrollreveal@4.0.9/dist/scrollreveal.min.js","distance":"8px","duration":500,"interval":100,"scale":1});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.preload = Object.assign({"enable":true,"service":"flying_pages","instant_page":"https://cdn.jsdelivr.net/gh/volantis-x/cdn-volantis@4.1.2/js/instant_page.js","flying_pages":"https://cdn.jsdelivr.net/gh/gijo-varghese/flying-pages@2.1.2/flying-pages.min.js"});
+  }
+</script>
+
+<!-- required -->
+
+  
+<script src="/js/main.js" async></script>
+
+
+
+<!-- optional -->
+
+
+
+<!-- inject -->
+
+
+  </div>
+</body>
+</html>

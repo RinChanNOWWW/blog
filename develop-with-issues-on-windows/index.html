@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+
+<head>
+  <meta name="generator" content="Hexo 5.4.0">
+  <meta charset="utf-8">
+  
+
+  <meta http-equiv='x-dns-prefetch-control' content='on' />
+  <link rel='dns-prefetch' href='https://cdn.jsdelivr.net'>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+  <meta name="renderer" content="webkit">
+  <meta name="force-rendering" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  <meta name="HandheldFriendly" content="True" >
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#f8f8f8">
+  <title>用 Windows 开发遇到的各种问题 - リン屋</title>
+
+  
+    <meta name="description" content="自从之前那段实习结束之后，我的日常开发就转变成了 Windows 10 + WSL2 的方式。刚开始的时候还觉得特爽，等新鲜感过去，这种模式成为常态之后， Windows 以及 WSL2 的各种毛病都逐渐涌现了出来。为了防止我之后再次遇到又变得一筹莫展，我将在这个文章里记录我使用 Windows 10 开发所遇到的各种问题（大概是会持续更新的……）。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="用 Windows 开发遇到的各种问题">
+<meta property="og:url" content="https://github.com/RinChanNOWWW/develop-with-issues-on-windows/">
+<meta property="og:site_name" content="リン屋">
+<meta property="og:description" content="自从之前那段实习结束之后，我的日常开发就转变成了 Windows 10 + WSL2 的方式。刚开始的时候还觉得特爽，等新鲜感过去，这种模式成为常态之后， Windows 以及 WSL2 的各种毛病都逐渐涌现了出来。为了防止我之后再次遇到又变得一筹莫展，我将在这个文章里记录我使用 Windows 10 开发所遇到的各种问题（大概是会持续更新的……）。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/develop-with-issues-on-windows/battery.png">
+<meta property="article:published_time" content="2021-04-01T01:33:42.000Z">
+<meta property="article:modified_time" content="2021-04-01T01:33:42.000Z">
+<meta property="article:author" content="RinChanNOW">
+<meta property="article:tag" content="Windows">
+<meta property="article:tag" content="WSL2">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/develop-with-issues-on-windows/battery.png">
+  
+  
+
+  <!-- feed -->
+  
+
+  
+    
+<link rel="stylesheet" href="/css/main.css">
+
+  
+
+  
+
+  
+</head>
+
+<body>
+  
+
+
+  <div class='l_body' id='start'>
+    <aside class='l_left' layout='post'>
+    
+
+
+<header class="header">
+
+<div class="logo-wrap"><a class="avatar" href="/about/"><div class="bg" style="opacity:0;background-image:url(https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.2/avatar/round/rainbow64@3x.webp);"></div><img no-lazy class="avatar" src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/profile/avatar.jpg" onerror="javascript:this.classList.add('error');this.src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/image/2659360.svg';"></a><a class="title" href="/"><div class="main">リン屋</div><div class="sub cap">RinChanNOW's blog</div></a></div>
+<nav class="menu dis-select"><a class="nav-item active" href="/">博客</a><a class="nav-item" href="/about/">关于</a></nav></header>
+
+<div class="widgets">
+
+<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Windows-%E4%BE%A7%E7%AB%AF%E5%8F%A3%E8%A2%AB%E5%8D%A0%E7%94%A8%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-text">Windows 侧端口被占用的问题</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%97%AE%E9%A2%98%E5%8F%91%E7%8E%B0"><span class="toc-text">问题发现</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%97%AE%E9%A2%98%E5%8E%9F%E7%90%86%E4%B8%8E%E8%A7%A3%E5%86%B3%E5%8A%9E%E6%B3%95"><span class="toc-text">问题原理与解决办法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-text">参考</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#WSL2-%E6%97%A0%E6%B3%95%E8%AE%BF%E9%97%AE%E5%B1%80%E5%9F%9F%E7%BD%91-IP-%E4%BB%A5%E5%8F%8A%E4%BA%92%E8%81%94%E7%BD%91"><span class="toc-text">WSL2 无法访问局域网 IP 以及互联网</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%97%AE%E9%A2%98%E5%8F%91%E7%8E%B0-1"><span class="toc-text">问题发现</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%97%AE%E9%A2%98%E5%8E%9F%E7%90%86%E4%B8%8E%E8%A7%A3%E5%86%B3%E5%8A%9E%E6%B3%95-1"><span class="toc-text">问题原理与解决办法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8F%82%E8%80%83-1"><span class="toc-text">参考</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#WSL2-%E7%BD%91%E7%BB%9C%E4%BB%A3%E7%90%86"><span class="toc-text">WSL2 网络代理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%9C%8B%E7%9C%8B%E5%BE%AE%E8%BD%AF%E4%B9%8B%E5%90%8E%E8%BF%98%E8%83%BD%E7%BB%99%E6%88%91%E6%95%B4%E4%BA%9B%E4%BB%80%E4%B9%88%E6%B4%BB"><span class="toc-text">看看微软之后还能给我整些什么活</span></a></li></ol></div></div></div>
+
+
+</div>
+
+
+    </aside>
+    <div class='l_main'>
+      
+
+      
+
+
+<div class="bread-nav fs12"><div id="breadcrumb"><a class="cap breadcrumb" href="/">主页</a><span class="sep"></span><a class="cap breadcrumb" href="/">文章</a><span class="sep"></span><a class="cap breadcrumb-link" href="/blog/categories/%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3/">问题解决</a></div><div id="post-meta">发布于&nbsp;<time datetime="2021-04-01T01:33:42.000Z">2021-04-01</time></div></div>
+
+<article class='content md post'>
+<h1 class="article-title"><span>用 Windows 开发遇到的各种问题</span></h1>
+<p>自从之前那段实习结束之后，我的日常开发就转变成了 Windows 10 + WSL2 的方式。刚开始的时候还觉得特爽，等新鲜感过去，这种模式成为常态之后， Windows 以及 WSL2 的各种毛病都逐渐涌现了出来。为了防止我之后再次遇到又变得一筹莫展，我将在这个文章里记录我使用 Windows 10 开发所遇到的各种问题（大概是会持续更新的……）。</p>
+<span id="more"></span>
+
+<h2 id="Windows-侧端口被占用的问题"><a href="#Windows-侧端口被占用的问题" class="headerlink" title="Windows 侧端口被占用的问题"></a>Windows 侧端口被占用的问题</h2><h3 id="问题发现"><a href="#问题发现" class="headerlink" title="问题发现"></a>问题发现</h3><p>起因是我有一天早上起来运行我的一个 React 前端项目，然后发现使用 <code>yarn start</code> 执行预设定好的启动脚本启动项目一直失败，报错 5555 端口被占用，重启电脑仍无法解决。这个 5555 端口并不是我自己某个设定中的端口，我觉得应该是我用的某个第三方模组，或者 Node 自生需要的端口，所以我没办法直接更改相关硬编码，只有寻求问题根本所在。</p>
+<h3 id="问题原理与解决办法"><a href="#问题原理与解决办法" class="headerlink" title="问题原理与解决办法"></a>问题原理与解决办法</h3><p>WSL2 是依托于 Hyper-V 进行虚拟化的，而这次的问题就处在 Hyper-V 上。在 Windows 启动后，Hyper-V 会预留几个范围的端口以便后续使用，而这次我就遇到了它将我需要用的 5555 端口占用了。通过以下指令可以查看被占用的端口范围：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">netsh interface ipv4 show excludedportrange protocol=tcp</span><br></pre></td></tr></table></figure>
+
+<p>会得到像下面这样类似的输出</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">协议 tcp 端口排除范围</span><br><span class="line"></span><br><span class="line">开始端口    结束端口</span><br><span class="line">----------    --------</span><br><span class="line">     50000       50059     *</span><br><span class="line">     60767       60866</span><br><span class="line">     60967       61066</span><br><span class="line">     61067       61166</span><br><span class="line">     61167       61266</span><br><span class="line">     61267       61366</span><br><span class="line">     61367       61466</span><br><span class="line">     61855       61954</span><br><span class="line">     64121       64220</span><br><span class="line"></span><br><span class="line">* - 管理的端口排除。</span><br></pre></td></tr></table></figure>
+
+<p><del>所以的这里的解决办法就是不断地重启系统直至需要的端口不被预留占用为止。</del></p>
+<p>上面的端口排除通常是由 Windows NAT Driver 操作的，所以可以通过关闭它来清除端口占用，然后再重启。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">net stop winnat</span><br><span class="line">net <span class="built_in">start</span> winnat</span><br></pre></td></tr></table></figure>
+
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><ul>
+<li><a href="https://github.com/docker/for-win/issues/3171#issuecomment-739740248">https://github.com/docker/for-win/issues/3171#issuecomment-739740248</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.herlitz.nu/2020/12/01/docker-error-ports-are-not-available-on-windows-10/">http://www.herlitz.nu/2020/12/01/docker-error-ports-are-not-available-on-windows-10/</a></li>
+</ul>
+<h2 id="WSL2-无法访问局域网-IP-以及互联网"><a href="#WSL2-无法访问局域网-IP-以及互联网" class="headerlink" title="WSL2 无法访问局域网 IP 以及互联网"></a>WSL2 无法访问局域网 IP 以及互联网</h2><h3 id="问题发现-1"><a href="#问题发现-1" class="headerlink" title="问题发现"></a>问题发现</h3><p>今天早上起来打开 WSL2 并使用 VSCode 的 Leetcode 插件准备水道题的，然后发现题怎么样都拉不下来，一直超时，然后发现原来是“断网了”。具体症状表现为：Windows 宿主机可以 ping 通 WSL2，WSL2 无法 ping 通 Windows 宿主机、无法 ping 通局域网中的虚拟机、无法 ping 同互联网上的域名与 IP，重启 WSL2 与 Windows 都无法解决这个问题。一开始以为是 Windows 防火墙的问题，然后给 Windows 的防火墙加了一条入站策略，发现可以 ping 通宿主机了，但是还是无法连接其他 IP 与域名，（我觉得 Windows 防火墙应该也不会妨碍 WSL2 访问外网吧？），所以应该不是防火墙的问题。我又检查了 <code>ip route</code> 与 DNS 发现都是正常的。</p>
+<p>然后我尝试平时挂代理的方式把 http 和 https 代理到了 Windows 宿主机上，发现是可以请求到外网的数据的。但这并不是一个长久之计，而且只能走 http 请求明显无法满足我的需求。</p>
+<p>然后我东搜西找终于在 GitHub 上找到了下面的这条奇葩方法。</p>
+<h3 id="问题原理与解决办法-1"><a href="#问题原理与解决办法-1" class="headerlink" title="问题原理与解决办法"></a>问题原理与解决办法</h3><p>这个问题的原理我目前还不知道，不知道会不会和我前一天重启了 Windows NAT Driver 有关，如果有人知道了可以通过我的邮箱或者其他 SNS 联系我（如果有人看到了的我这篇文章的话……）。</p>
+<p>解决办法是到 <strong>控制面板-&gt;硬件和声音-&gt;电源选项-&gt;系统设置</strong> 里把 <strong>启用快速启动</strong> 取消勾选，然后重启电脑，然后就可以正常上网了，没错，就是这么简单……</p>
+<img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/develop-with-issues-on-windows/battery.png" style="zoom:67%;" />
+
+<p>能找到这个解决办法的老哥真的是个神人……希望微软之后能修复这个 bug 吧……</p>
+<h3 id="参考-1"><a href="#参考-1" class="headerlink" title="参考"></a>参考</h3><ul>
+<li><a href="https://github.com/microsoft/WSL/issues/4275#issuecomment-740043852">https://github.com/microsoft/WSL/issues/4275#issuecomment-740043852</a></li>
+<li><a target="_blank" rel="noopener" href="https://stephenreescarter.net/wsl2-network-issues-and-win-10-fast-start-up/">https://stephenreescarter.net/wsl2-network-issues-and-win-10-fast-start-up/</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/swordsm/article/details/107948497">https://blog.csdn.net/swordsm/article/details/107948497</a> （并未解决此次问题，但也许可以解决其他 WSL2 的网络问题？）</li>
+</ul>
+<h3 id="WSL2-网络代理"><a href="#WSL2-网络代理" class="headerlink" title="WSL2 网络代理"></a>WSL2 网络代理</h3><p>现在的大陆的网络环境害的我们不得不掌握科学上网的技能，又是 WSL2 虚拟化的缘故，当使用科学上网工具进行系统代理时没法将 WSL2 侧的网络也给代理了，于是需要做一些特殊的操作。关于这个的文章网上其实有很多，我这里就简单的记录以下。</p>
+<p>解决办法就是把请求代理（我就只做了 http 与 https 的，其他协议的咱也不知道怎么弄）到 Windows 宿主机这边的科学上网工具的端口上。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!bin/bash</span></span><br><span class="line"><span class="comment"># WSL2 局域网的宿主机 IP</span></span><br><span class="line">host_ip=$(cat /etc/resolv.conf |grep <span class="string">&quot;nameserver&quot;</span> |cut -f 2 -d <span class="string">&quot; &quot;</span>)</span><br><span class="line">protocol=科学上网工具使用的协议</span><br><span class="line">port=科学上网工具的本地监听端口</span><br><span class="line"><span class="built_in">export</span> http_proxy=<span class="string">&quot;<span class="variable">$protocol</span>://<span class="variable">$host_ip</span>:<span class="variable">$port</span>&quot;</span></span><br><span class="line"><span class="built_in">export</span> https_proxy=<span class="string">&quot;<span class="variable">$protocol</span>://<span class="variable">$host_ip</span>:<span class="variable">$port</span>&quot;</span></span><br><span class="line"><span class="comment"># 取消代理</span></span><br><span class="line"><span class="comment"># unset http_proxy</span></span><br><span class="line"><span class="comment"># unset https_proxy</span></span><br></pre></td></tr></table></figure>
+
+<p>可以把这个写成一个脚本放在某个地方，然后每次要用的时候就执行一下就行了，相应的可以再写一个取消代理的脚本。不过有一点要注意的就是，使用 <code>sh</code> 执行是会新开一个 shell 来执行的，这样环境变量并没有加载到当前 shell 上，还是無駄的，所以应该用 <code>source</code> 来执行。</p>
+<p>另外值得说的一点是，<code>/etc/resolv.conf</code> 这个文件是 WSL 自动生成的，里面记录 DNS 的地址，在 WSL2 里就是宿主机的 IP，所以可以通过提取这个文件的内容然后在进行一些简单的文本操作就能拿到宿主机 IP。整个文件的内容类似下面这样：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># This file was automatically generated by WSL. To stop automatic generation of this file, add the following entry to /etc/wsl.conf:</span><br><span class="line"># [network]</span><br><span class="line"># generateResolvConf = false</span><br><span class="line">nameserver 172.31.208.1</span><br></pre></td></tr></table></figure>
+
+<h2 id="看看微软之后还能给我整些什么活"><a href="#看看微软之后还能给我整些什么活" class="headerlink" title="看看微软之后还能给我整些什么活"></a>看看微软之后还能给我整些什么活</h2><p>看看微软之后还能给我整些什么活……</p>
+
+
+<div class="article-footer reveal fs14"><section id="license"><div class="header"><span>许可协议</span></div><div class="body"><p>本文采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">署名-非商业性使用-相同方式共享 4.0 国际</a> 许可协议，转载请注明出处。</p>
+</div></section></div>
+
+</article>
+
+<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/k8s-vm-restart/">记一次虚拟机搭建 k8s 集群踩的坑<span class="note">较早</span></a><div class="line"></div><a id="prev" href="/2021-4-20-tx-interview/">2021年4月20日 TEG 云架构部门面经<span class="note">较新</span></a><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
+
+
+
+
+
+
+
+
+      
+<footer class="page-footer reveal fs12"><hr><div class="text"><p>本博客所有文章除特别声明外，均采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> 许可协议，转载请注明出处。</p>
+<p>本站由 <a href="https://github.com/RinChanNOWWW/">@RinChanNOW</a> 创建，使用 <a href="https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0" title="v1.5.0">Stellar</a> 作为主题。</p>
+</div></footer>
+
+      <div class='float-panel mobile-only blur' style='display:none'>
+  <button type='button' class='sidebar-toggle mobile' onclick='sidebar.toggle()'>
+    <svg class="icon" style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="15301"><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 2.3 26.8 24.6 47.5 51.6 47.6h416.5v4z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15302"></path><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 1.9 27.7 23.9 49.7 51.6 51.6h416.5z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15303"></path></svg>
+  </button>
+</div>
+
+    </div>
+  </div>
+  <div class='scripts'>
+    <script type="text/javascript">
+  stellar = {
+    // 懒加载 css https://github.com/filamentgroup/loadCSS
+    loadCSS: (href, before, media, attributes) => {
+      var doc = window.document;
+      var ss = doc.createElement("link");
+      var ref;
+      if (before) {
+        ref = before;
+      } else {
+        var refs = (doc.body || doc.getElementsByTagName("head")[0]).childNodes;
+        ref = refs[refs.length - 1];
+      }
+      var sheets = doc.styleSheets;
+      if (attributes) {
+        for (var attributeName in attributes) {
+          if (attributes.hasOwnProperty(attributeName)) {
+            ss.setAttribute(attributeName, attributes[attributeName]);
+          }
+        }
+      }
+      ss.rel = "stylesheet";
+      ss.href = href;
+      ss.media = "only x";
+      function ready(cb) {
+        if (doc.body) {
+          return cb();
+        }
+        setTimeout(function () {
+          ready(cb);
+        });
+      }
+      ready(function () {
+        ref.parentNode.insertBefore(ss, before ? ref : ref.nextSibling);
+      });
+      var onloadcssdefined = function (cb) {
+        var resolvedHref = ss.href;
+        var i = sheets.length;
+        while (i--) {
+          if (sheets[i].href === resolvedHref) {
+            return cb();
+          }
+        }
+        setTimeout(function () {
+          onloadcssdefined(cb);
+        });
+      };
+      function loadCB() {
+        if (ss.addEventListener) {
+          ss.removeEventListener("load", loadCB);
+        }
+        ss.media = media || "all";
+      }
+      if (ss.addEventListener) {
+        ss.addEventListener("load", loadCB);
+      }
+      ss.onloadcssdefined = onloadcssdefined;
+      onloadcssdefined(loadCB);
+      return ss;
+    },
+
+    // 从 butterfly 和 volantis 获得灵感
+    loadScript: (src, opt) => new Promise((resolve, reject) => {
+      var script = document.createElement('script');
+      script.src = src;
+      if (opt) {
+        for (let key of Object.keys(opt)) {
+          script[key] = opt[key]
+        }
+      } else {
+        // 默认异步，如果需要同步，第二个参数传入 {} 即可
+        script.async = true
+      }
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    }),
+
+    // https://github.com/jerryc127/hexo-theme-butterfly
+    jQuery: (fn) => {
+      if (typeof jQuery === 'undefined') {
+        stellar.loadScript(stellar.plugins.jQuery).then(fn)
+      } else {
+        fn()
+      }
+    }
+  };
+  stellar.github = 'https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0';
+  stellar.config = {
+    date_suffix: {
+      just: '刚刚',
+      min: '分钟前',
+      hour: '小时前',
+      day: '天前',
+      month: '个月前',
+    },
+  };
+
+  // required plugins (only load if needs)
+  stellar.plugins = {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js',
+    sitesjs: '/js/plugins/sites.js',
+    friendsjs: '/js/plugins/friends.js',
+  };
+
+  // optional plugins
+  if ('true' == 'true') {
+    stellar.plugins.lazyload = Object.assign({"enable":true,"js":"https://cdn.jsdelivr.net/npm/vanilla-lazyload@17.3.1/dist/lazyload.min.js","transition":"blur"});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.swiper = Object.assign({"enable":true,"css":"https://unpkg.com/swiper/swiper-bundle.min.css","js":"https://unpkg.com/swiper/swiper-bundle.min.js"});
+  }
+  if ('' == 'true') {
+    stellar.plugins.scrollreveal = Object.assign({"enable":null,"js":"https://cdn.jsdelivr.net/npm/scrollreveal@4.0.9/dist/scrollreveal.min.js","distance":"8px","duration":500,"interval":100,"scale":1});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.preload = Object.assign({"enable":true,"service":"flying_pages","instant_page":"https://cdn.jsdelivr.net/gh/volantis-x/cdn-volantis@4.1.2/js/instant_page.js","flying_pages":"https://cdn.jsdelivr.net/gh/gijo-varghese/flying-pages@2.1.2/flying-pages.min.js"});
+  }
+</script>
+
+<!-- required -->
+
+  
+<script src="/js/main.js" async></script>
+
+
+
+<!-- optional -->
+
+
+
+<!-- inject -->
+
+
+  </div>
+</body>
+</html>

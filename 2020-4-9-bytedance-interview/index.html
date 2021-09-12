@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+
+<head>
+  <meta name="generator" content="Hexo 5.4.0">
+  <meta charset="utf-8">
+  
+
+  <meta http-equiv='x-dns-prefetch-control' content='on' />
+  <link rel='dns-prefetch' href='https://cdn.jsdelivr.net'>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+  <meta name="renderer" content="webkit">
+  <meta name="force-rendering" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  <meta name="HandheldFriendly" content="True" >
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#f8f8f8">
+  <title>4月9日字节跳动视频架构后台开发面经 - リン屋</title>
+
+  
+    <meta name="description" content="4月9日字节跳动视频架构后台开发面经">
+<meta property="og:type" content="article">
+<meta property="og:title" content="4月9日字节跳动视频架构后台开发面经">
+<meta property="og:url" content="https://github.com/RinChanNOWWW/2020-4-9-bytedance-interview/">
+<meta property="og:site_name" content="リン屋">
+<meta property="og:description" content="4月9日字节跳动视频架构后台开发面经">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-04-10T00:06:33.000Z">
+<meta property="article:modified_time" content="2020-04-10T00:06:33.000Z">
+<meta property="article:author" content="RinChanNOW">
+<meta property="article:tag" content="字节跳动面试">
+<meta name="twitter:card" content="summary">
+  
+  
+
+  <!-- feed -->
+  
+
+  
+    
+<link rel="stylesheet" href="/css/main.css">
+
+  
+
+  
+
+  
+</head>
+
+<body>
+  
+
+
+  <div class='l_body' id='start'>
+    <aside class='l_left' layout='post'>
+    
+
+
+<header class="header">
+
+<div class="logo-wrap"><a class="avatar" href="/about/"><div class="bg" style="opacity:0;background-image:url(https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.2/avatar/round/rainbow64@3x.webp);"></div><img no-lazy class="avatar" src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/profile/avatar.jpg" onerror="javascript:this.classList.add('error');this.src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/image/2659360.svg';"></a><a class="title" href="/"><div class="main">リン屋</div><div class="sub cap">RinChanNOW's blog</div></a></div>
+<nav class="menu dis-select"><a class="nav-item active" href="/">博客</a><a class="nav-item" href="/about/">关于</a></nav></header>
+
+<div class="widgets">
+
+<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E9%9D%A2"><span class="toc-text">一面</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E9%9D%A2"><span class="toc-text">二面</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E9%9D%A2"><span class="toc-text">三面</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-text">总结</span></a></li></ol></div></div></div>
+
+
+</div>
+
+
+    </aside>
+    <div class='l_main'>
+      
+
+      
+
+
+<div class="bread-nav fs12"><div id="breadcrumb"><a class="cap breadcrumb" href="/">主页</a><span class="sep"></span><a class="cap breadcrumb" href="/">文章</a><span class="sep"></span><a class="cap breadcrumb-link" href="/blog/categories/%E9%9D%A2%E7%BB%8F/">面经</a></div><div id="post-meta">发布于&nbsp;<time datetime="2020-04-10T00:06:33.000Z">2020-04-10</time></div></div>
+
+<article class='content md post'>
+<h1 class="article-title"><span>4月9日字节跳动视频架构后台开发面经</span></h1>
+<p>4月9日字节跳动视频架构后台开发面经</p>
+<span id="more"></span>
+
+<h2 id="一面"><a href="#一面" class="headerlink" title="一面"></a>一面</h2><ul>
+<li><p>项目经历</p>
+<p>简单问了一下我大一下的的一个大作业车间调度算法的实现。</p>
+</li>
+<li><p>基础知识</p>
+<ul>
+<li><p>进程和线程的区别。</p>
+</li>
+<li><p>CPU 调度的最小单位是什么。</p>
+</li>
+<li><p>HTTP 与 HTTPS 的区别。</p>
+</li>
+<li><p>知道哪些数据库引擎。</p>
+<p>​    我就只知道 InnoDB。。。</p>
+</li>
+<li><p>对称加密与非对称加密的区别。</p>
+</li>
+<li><p>数据库中 inner join 和 left join 的区别。</p>
+</li>
+<li><p>使用 select 语句分页查询的效率如何，比如查询前 100 个记录和后 100 个记录效率比较。</p>
+</li>
+<li><p>数据库事务的特点并解释。</p>
+<p>​    即 ACID。（当时有点慌没有答好。。）</p>
+</li>
+<li><p>平衡二叉树和红黑树的定义。谁的查找效率更好？谁的插入效率更高？</p>
+<p>​    平衡二叉树更好查找，因为它更矮更平均。红黑树的维护没有平衡二叉树那么复杂，所以插入效率更高。</p>
+</li>
+<li><p>ARP 协议的过程。</p>
+</li>
+<li><p>不同架构的机器（如 x86 和 arm）编译的可执行文件可以在对方机器上运行吗？为什么？要如何才能在不同架构的机器上执行？可以在一种架构的机器上编译另一种架构机器的可执行文件吗？如何做到？</p>
+</li>
+<li><p>Linux 会用吗？</p>
+</li>
+<li><p>Linux 如何查看文件权限。</p>
+</li>
+<li><p>操作系统进程调度的几种算法。</p>
+</li>
+</ul>
+</li>
+<li><p>算法</p>
+<ul>
+<li><p>单链表反转。（手写）</p>
+</li>
+<li><p>Top K 问题。</p>
+<p>具体问法是 100w 个无序数据中选 100 个最大的数据。一开始我还在往位图算法上想。。。结果经面试官一提醒，直接建立一个容量为 100 的大根堆就行了。。</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="二面"><a href="#二面" class="headerlink" title="二面"></a>二面</h2><ul>
+<li><p>基础知识</p>
+<ul>
+<li><p>C++ <code>static</code> 关键字的作用。</p>
+</li>
+<li><p>C++ 中重载和重写分别是什么？</p>
+</li>
+<li><p>C++ 的动态绑定是怎样的？</p>
+<p>​    一开始没理解面试官的意思，然后突然想起他应该指的是虚函数的动态绑定。</p>
+</li>
+<li><p>对 Python 多线程的理解。</p>
+</li>
+<li><p>对协程的看法。</p>
+</li>
+<li><p>知道哪些内存泄漏的例子。</p>
+</li>
+<li><p>TCP 与 UDP 的区别。</p>
+</li>
+<li><p>socket 编程中使用 TCP 连接的过程。</p>
+</li>
+<li><p>知道 RPC 吗？</p>
+<p>​    这个只知道叫 远程过程调用，具体不清楚。。</p>
+</li>
+<li><p>小端模式与大端模式。</p>
+</li>
+</ul>
+</li>
+<li><p>算法</p>
+<ul>
+<li><p>最大子段和。（手写）</p>
+</li>
+<li><p>统计一个数二进制中 1 的个数。（手写）</p>
+<p>有很多种方法，可参考 <a target="_blank" rel="noopener" href="https://www.cnblogs.com/graphics/archive/2010/06/21/1752421.html">https://www.cnblogs.com/graphics/archive/2010/06/21/1752421.html</a></p>
+</li>
+</ul>
+</li>
+<li><p>提问环节</p>
+<p>问了下他们的业务。</p>
+</li>
+</ul>
+<h2 id="三面"><a href="#三面" class="headerlink" title="三面"></a>三面</h2><p>​        三面只有十分钟，没有问什么技术问题。问了我对实习的看法，以后的规划。然后问我本科期间最后成就感的事情，然后给他看了下我的博客。基本上就是确认我会过去进行一段较长时间的实习。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>​        首先要感谢<a target="_blank" rel="noopener" href="https://ipotato.me/">耿总</a>的内推，不过耿总五月份就要去 aws 走上他的架构师之路了，这里要由衷地说一句**<font color=red>太强了</font>**。</p>
+<p>​        头条的效率是真的高，一天下午就搞完三面。自己来说感觉还是比较充分的，不过还是有点小小的紧张，有很多问题都是张口就来，没有好好的思考，不过面试官都挺好的，我好几次都是经过面试官提醒才突然改答案，这么一想还有点尴尬。。。后来也渐渐进入状态。</p>
+<p>​        我面试的小组目前做的是云游戏的内容（没想到头条也在搞云游戏），不过目前还只是起步阶段，后台开发主要是做云游戏的调度等工作，然和后其他视频平台比如抖音做对接。只能说是很巧了，我的的确确对云游戏很感兴趣，这里要再次感谢耿总的内推。二面的时候我还问了下面试官腾讯的云游戏（指堡垒之夜）没有办法进行语音，不知道这是为什么，是有技术上的问题吗，然后面试官：你来就知道了（笑）。</p>
+
+
+<div class="article-footer reveal fs14"><section id="license"><div class="header"><span>许可协议</span></div><div class="body"><p>本文采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">署名-非商业性使用-相同方式共享 4.0 国际</a> 许可协议，转载请注明出处。</p>
+</div></section></div>
+
+</article>
+
+<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/2020-4-1-tx-interview/">4月1日腾讯 TEG 后台开发一轮面试凉经<span class="note">较早</span></a><div class="line"></div><a id="prev" href="/web-usb-connector/">使用 Chrome 浏览器连接 USB 设备<span class="note">较新</span></a><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
+
+
+
+
+
+
+
+
+      
+<footer class="page-footer reveal fs12"><hr><div class="text"><p>本博客所有文章除特别声明外，均采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> 许可协议，转载请注明出处。</p>
+<p>本站由 <a href="https://github.com/RinChanNOWWW/">@RinChanNOW</a> 创建，使用 <a href="https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0" title="v1.5.0">Stellar</a> 作为主题。</p>
+</div></footer>
+
+      <div class='float-panel mobile-only blur' style='display:none'>
+  <button type='button' class='sidebar-toggle mobile' onclick='sidebar.toggle()'>
+    <svg class="icon" style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="15301"><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 2.3 26.8 24.6 47.5 51.6 47.6h416.5v4z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15302"></path><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 1.9 27.7 23.9 49.7 51.6 51.6h416.5z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15303"></path></svg>
+  </button>
+</div>
+
+    </div>
+  </div>
+  <div class='scripts'>
+    <script type="text/javascript">
+  stellar = {
+    // 懒加载 css https://github.com/filamentgroup/loadCSS
+    loadCSS: (href, before, media, attributes) => {
+      var doc = window.document;
+      var ss = doc.createElement("link");
+      var ref;
+      if (before) {
+        ref = before;
+      } else {
+        var refs = (doc.body || doc.getElementsByTagName("head")[0]).childNodes;
+        ref = refs[refs.length - 1];
+      }
+      var sheets = doc.styleSheets;
+      if (attributes) {
+        for (var attributeName in attributes) {
+          if (attributes.hasOwnProperty(attributeName)) {
+            ss.setAttribute(attributeName, attributes[attributeName]);
+          }
+        }
+      }
+      ss.rel = "stylesheet";
+      ss.href = href;
+      ss.media = "only x";
+      function ready(cb) {
+        if (doc.body) {
+          return cb();
+        }
+        setTimeout(function () {
+          ready(cb);
+        });
+      }
+      ready(function () {
+        ref.parentNode.insertBefore(ss, before ? ref : ref.nextSibling);
+      });
+      var onloadcssdefined = function (cb) {
+        var resolvedHref = ss.href;
+        var i = sheets.length;
+        while (i--) {
+          if (sheets[i].href === resolvedHref) {
+            return cb();
+          }
+        }
+        setTimeout(function () {
+          onloadcssdefined(cb);
+        });
+      };
+      function loadCB() {
+        if (ss.addEventListener) {
+          ss.removeEventListener("load", loadCB);
+        }
+        ss.media = media || "all";
+      }
+      if (ss.addEventListener) {
+        ss.addEventListener("load", loadCB);
+      }
+      ss.onloadcssdefined = onloadcssdefined;
+      onloadcssdefined(loadCB);
+      return ss;
+    },
+
+    // 从 butterfly 和 volantis 获得灵感
+    loadScript: (src, opt) => new Promise((resolve, reject) => {
+      var script = document.createElement('script');
+      script.src = src;
+      if (opt) {
+        for (let key of Object.keys(opt)) {
+          script[key] = opt[key]
+        }
+      } else {
+        // 默认异步，如果需要同步，第二个参数传入 {} 即可
+        script.async = true
+      }
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    }),
+
+    // https://github.com/jerryc127/hexo-theme-butterfly
+    jQuery: (fn) => {
+      if (typeof jQuery === 'undefined') {
+        stellar.loadScript(stellar.plugins.jQuery).then(fn)
+      } else {
+        fn()
+      }
+    }
+  };
+  stellar.github = 'https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0';
+  stellar.config = {
+    date_suffix: {
+      just: '刚刚',
+      min: '分钟前',
+      hour: '小时前',
+      day: '天前',
+      month: '个月前',
+    },
+  };
+
+  // required plugins (only load if needs)
+  stellar.plugins = {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js',
+    sitesjs: '/js/plugins/sites.js',
+    friendsjs: '/js/plugins/friends.js',
+  };
+
+  // optional plugins
+  if ('true' == 'true') {
+    stellar.plugins.lazyload = Object.assign({"enable":true,"js":"https://cdn.jsdelivr.net/npm/vanilla-lazyload@17.3.1/dist/lazyload.min.js","transition":"blur"});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.swiper = Object.assign({"enable":true,"css":"https://unpkg.com/swiper/swiper-bundle.min.css","js":"https://unpkg.com/swiper/swiper-bundle.min.js"});
+  }
+  if ('' == 'true') {
+    stellar.plugins.scrollreveal = Object.assign({"enable":null,"js":"https://cdn.jsdelivr.net/npm/scrollreveal@4.0.9/dist/scrollreveal.min.js","distance":"8px","duration":500,"interval":100,"scale":1});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.preload = Object.assign({"enable":true,"service":"flying_pages","instant_page":"https://cdn.jsdelivr.net/gh/volantis-x/cdn-volantis@4.1.2/js/instant_page.js","flying_pages":"https://cdn.jsdelivr.net/gh/gijo-varghese/flying-pages@2.1.2/flying-pages.min.js"});
+  }
+</script>
+
+<!-- required -->
+
+  
+<script src="/js/main.js" async></script>
+
+
+
+<!-- optional -->
+
+
+
+<!-- inject -->
+
+
+  </div>
+</body>
+</html>
