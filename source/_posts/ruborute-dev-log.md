@@ -12,6 +12,36 @@ categories:
 
 <!-- more -->
 
+## 2021-9-14
+
+### 实现 Tab 补全与历史提示
+
+ [rustyline](https://github.com/kkawakam/rustyline) 提供了 `Completer` 和 `Hinter` 这两个 trait 可以用来实现这两个功能。对于历史提示（就像 zsh 的 auto-suggestion 插件那样），只需要接入 rustyline 提供的 `HistoryHinter` 即可，`Completer` 则需要自己实现。
+
+```rust
+/// To be called for tab-completion.
+pub trait Completer {
+    /// Takes the currently edited `line` with the cursor `pos`ition and
+    /// returns the start position and the completion candidates for the
+    /// partial word to be completed.
+    ///
+    /// ("ls /usr/loc", 11) => Ok((3, vec!["/usr/local/"]))
+    fn complete(
+        &self,
+        line: &str,
+        pos: usize,
+        ctx: &Context<'_>,
+    ) -> Result<(usize, Vec<Self::Candidate>)> {
+        let _ = (line, pos, ctx);
+        Ok((0, Vec::with_capacity(0)))
+    }
+}
+```
+
+只需要实现这个 complete 方法即可。这个方法参数是当前的输入，当前输入字符串的位置以及一个上下文（不用管），返回是要替换的字符串开始的位置以及候选项列表。如果候选项只有一个，它会直接不全，否则会显示所有候选项（需要开启 `CompletionType::List` 模式）。
+
+实现这个主要参考了 rustyline 官方给的例子 https://github.com/kkawakam/rustyline/tree/master/examples （主要是那个 example.rs）。
+
 ## 2021-9-3
 
 ### 实现数据统计并发布 v0.1.1 版本
