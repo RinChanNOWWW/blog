@@ -60,7 +60,7 @@ PingCAP incubator 的项目，实现一个微型 TiKV。在此文章中记录一
 
 这里需要解决的疑惑是，**snapshot 都是无法访问的**。TinyKV 会启动协程定期对日志进行压缩处理，**一旦日志被压缩了，那它便不会被 Raft 算法涉及**。snapshot 和日志一样，在没有被 upper application 处理之前，都一直处于 pending 状态。所以当 Leader 读取日志时发现读不到的时候，它就知道有日志被压缩成 snapshot 了，它就需要向 Follower 同步这个 snapshot。想明白了这些实现起来就容易了。
 
-## [WIP] Project 3
+## Project 3
 
 这部分会实现 TiKV 的多 Region 多 Raft Group 机制。
 
@@ -69,3 +69,39 @@ PingCAP incubator 的项目，实现一个微型 TiKV。在此文章中记录一
 此部分依靠 Raft extend 论文的 Section 6 以及 https://web.stanford.edu/~ouster/cgi-bin/papers/OngaroPhD.pdf 的 Section 3.10 实现了 Raft 层面的 Leader Transfer 以及节点配置的变化（也就是 Raft 集群的成员变更）。其中对于成员变更的细节主要参考了原论文以及 https://zhuanlan.zhihu.com/p/375059508 这篇文章的解读。后者是前者的翻译 + 更加平实的语言的分析。
 
 本部分实现起来较为简单，主要是复习了一遍 Raft 的成员变更策略，之前面试问到都没想起来……之前读论文的时候这后面的部分读的太水了……
+
+### Part B
+
+此部分依照 Project 2 Part B 的结构添加了针对 Leader Transfer 和 Conf Change 两种消息的处理，实现起来相对较为简单。需要注意的就是记得更新 `storeMeta` 里的信息。
+
+做这个 part 的时候因为一个坑点调试了好几个小时。就是 Conf Change 中 AddNode 之后，集群的信息（`raft.Prs` 等）不会立刻同步到新的节点上，`NewPeer` 这个方法并不会初始化 `peers` 这个属性，这会导致下面这段代码直接返回，不进入 step 处理：
+
+```go
+// raft/raft.go
+func (r *Raft) Step(m pb.Message) error {
+	// Your Code Here (2A).
+	if _, ok := r.Prs[r.id]; !ok {
+        // 会直接返回
+		return nil
+	}
+	switch r.State {
+	case StateFollower:
+		return r.stepFollower(m)
+	case StateCandidate:
+		return r.stepCandidate(m)
+	case StateLeader:
+		return r.stepLeader(m)
+	}
+	return nil
+}
+```
+
+从而导致新增加的节点无法处理心跳而超时进行选举，又由于双节点情况下成为 candidate 会立刻成为 leader，这不仅会造成脑裂，而且会导致新节点成为 leader 后进行 append entries 操作更新自己节点的 `raft.Prs` 出错（在我的设计中，每一个节点，包括自己都会存在 `raft.Prs` 中，当然如果不这样设计就不会出现这样的问题），因为 `raft.Prs` 是空的，对其访问会引发访存错误。**新节点中的集群信息需要等待当前 leader 发送 snapshot 进行更新**。
+
+解决这个问题有很多种方法，比如可以优化上面的这个 `Step` 方法，做特殊判断。我的解决办法是在 `newRaft` 的时候必初始化 `raft.Prs`，为其添加一条针对本节点的记录。
+
+对于此 part 的 test case，都能通过，但是有些有时会超时，也不知道是不是代码的问题，这还需要后续排查。
+
+### Part C
+
+WIP
