@@ -72,6 +72,8 @@ PingCAP incubator 的项目，实现一个微型 TiKV。在此文章中记录一
 
 ### Part B
 
+#### 关于 Leader 与成员变更
+
 此部分依照 Project 2 Part B 的结构添加了针对 Leader Transfer 和 Conf Change 两种消息的处理，实现起来相对较为简单。需要注意的就是记得更新 `storeMeta` 里的信息。
 
 做这个 part 的时候因为一个坑点调试了好几个小时。就是 Conf Change 中 AddNode 之后，集群的信息（`raft.Prs` 等）不会立刻同步到新的节点上，`NewPeer` 这个方法并不会初始化 `peers` 这个属性，这会导致下面这段代码直接返回，不进入 step 处理：
@@ -101,6 +103,15 @@ func (r *Raft) Step(m pb.Message) error {
 解决这个问题有很多种方法，比如可以优化上面的这个 `Step` 方法，做特殊判断。我的解决办法是在 `newRaft` 的时候必初始化 `raft.Prs`，为其添加一条针对本节点的记录。
 
 对于此 part 的 test case，都能通过，但是有些有时会超时，也不知道是不是代码的问题，这还需要后续排查。
+
+#### 关于 Region 分裂
+
+这个其实很好实现，还是在之前的框架之下，对 `raft_cmdpb.AdminCmdType_Split` 信息进行处理即可。整个过程就是：
+
+1. 判断当前 region epoch 是否合法。
+2. 判断 split key 是否在当前 region 中。
+3. 更新 store meta，从 `d.ctx.storeMeta.regionRanges` 中删除老 region。
+4. 生成新 region，及其 peers。新 region 范围是 [split key, 老 region.EndKey)，更新老 region 的 end key 为 split key，并将更新 `d.ctx.storeMeta.regionRanges` 与 `d.ctx.storeMeta.regions`。并写入实际存储层。 
 
 ### Part C
 
