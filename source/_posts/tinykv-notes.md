@@ -115,4 +115,17 @@ func (r *Raft) Step(m pb.Message) error {
 
 ### Part C
 
+这部分相当于实现一个小型的 [pd](https://github.com/tikv/pd)，实现了其中收集心跳与集群平衡调度两个小功能，整体实现起来较为简单，只需要按照文档中的步骤一步一步实现即可（不过首先是要读懂）。
+
+不过值得注意是选中要迁移的 region 所在的 store 数需要满足 cluster 的 max replicas。
+
+```go
+storeIds := suitableRegion.GetStoreIds()
+if len(storeIds) < cluster.GetMaxReplicas() {
+    return nil
+}
+```
+
+## Project 4
+
 WIP
