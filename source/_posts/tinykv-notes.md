@@ -128,4 +128,14 @@ if len(storeIds) < cluster.GetMaxReplicas() {
 
 ## Project 4
 
+本 Project 目的是实现分布式事务。TiDB 的分布式事务模型采用的 Google 的 Percolator 模型，所以实现本节的关键就是理解 Percolator 的思想。
+
+我主要是参考原论文：https://www.usenix.org/legacy/events/osdi10/tech/full_papers/Peng.pdf ，以及这篇解析：http://mysql.taobao.org/monthly/2018/11/02/ 。
+
+### Part A
+
+这部分实现了事务的基础，也就是实现原论文中对于某一个数据对象 data、lock、write 三列的读写。总体实现上较为简单，我借助了原论文的 Figure 4 来加以理解。接下来就是了解 TinyKV 给我提供的一些 tool 函数与访存接口进行 KV 的读写即可。
+
+### Part B
+
 WIP
