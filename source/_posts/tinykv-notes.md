@@ -136,6 +136,35 @@ if len(storeIds) < cluster.GetMaxReplicas() {
 
 这部分实现了事务的基础，也就是实现原论文中对于某一个数据对象 data、lock、write 三列的读写。总体实现上较为简单，我借助了原论文的 Figure 4 来加以理解。接下来就是了解 TinyKV 给我提供的一些 tool 函数与访存接口进行 KV 的读写即可。
 
+另外一个要注意的就是用完 `Iter` 之后记得把迭代器 close 了。4B 会做这个的检测，要不然会 fail（可真安全啊）。
+
 ### Part B
+
+Part B 在 Part A 实现的 MVCC Transaction 的基础上实现了 get，prewrite 与 commit 这三个操作的逻辑。逻辑清晰简单，下面记录一下主要的逻辑。
+
+#### KvGet
+
+- 检查是否有当前 Version 之前的 lock，如果有则无法拿到 value，返回 key is locked。
+
+#### KvPrewrite
+
+对于每一个 key 的 prewrite：
+
+- 检查是否有当前 start_ts 之后最近的一次 write，如果有，则 prewrite 失败，记录当前 key conflict。
+- 检查是否有非当前 Version 的 lock，如果有，则 prewrite 失败，记录当前 key is locked。
+
+- 若上述都成功，则写入 data（在 TinyKV 中为 default 列族），并 lock。
+
+#### KvCommit
+
+commit 的所有操作都在对 key 的 latch 下进行。
+
+对于每一个 key 的 commit：
+
+- 检查当前 key 是否有 lock，如果没有，commit 失败直接返回。
+- 检查当前 key 的 lock 是否属于当前事务，如果不是，commit 返回 retryable。
+- 若上述都成功，则写入 write，并移除 lock。
+
+### Part C
 
 WIP
