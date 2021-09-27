@@ -167,4 +167,78 @@ commit 的所有操作都在对 key 的 latch 下进行。
 
 ### Part C
 
-WIP
+ 此部分实现四个方法：
+
+- `KvScan`：用于按 Key 顺序扫描。
+- `KvCheckTxnStatus`：用于检查事务锁的状态。
+- `KvBatchRollback`：用于批量回滚数据。
+- `KvResolveLock`：用于解决锁的问题。
+
+这部分的实现其实较为容易，按照注释里给的步骤一步一步实现即可，只有 `KvScan` 需要稍微自己想想。
+
+#### KvScan
+
+这部分首先要实现 `Scanner` 这个 struct，相当于是自己封装了一个迭代器，来顺序迭代基于 MVCC 的 key。
+
+根据我之前各种迭代器的了解，最重要的就是需要在迭代器类中记录一个 next 值，用来指向当前需要访问的值，并在得到值之后进行更新，更新为想实现的顺序逻辑的下一个记录；如果 next 值为空，则代表迭代结束。所以整个 `Scanner` 的实现就秉承上面的思想就可以了。
+
+首先是当前有效值的查找。TinyKV 中 KV 值的顺序为 (userkey 升序，ts 倒序)，也就是排除 ts 不看的话，是按 userkey 升序排列，在每一个 key 的部分中，按 ts 倒叙排列，越新的在越前面。举个例子，如果整个 key 为 {userkey_ts}，那么会有如下顺序（从左到右为递增）：1_10, 1_5, 1_1, 2_4, 2_1, 3_20, 3_15, 3_5......在这样的顺序的基础上，需要找到最接近且大于 {next_start} 的值（next 为要找的值，start 为事务的 start_ts）：
+
+```go
+scan.iter.Seek(EncodeKey(key, scan.txn.StartTS))
+item := scan.iter.Item()
+currentUserkey := DecodeUserKey(item.Key())
+currentTs := decodeTimestamp(item.Key())
+// 需要找到满足 ts > txn.StarTS 的
+for scan.iter.Valid() && currentTs > scan.txn.StartTS {
+    scan.iter.Seek(EncodeKey(currentUserkey, scan.txn.StartTS))
+    item = scan.iter.Item()
+    currentTs = decodeTimestamp(item.Key())
+    currentUserkey = DecodeUserKey(item.Key())
+}
+```
+
+然后就是下一个 next 值得查找。这个就比较简单，只需要顺序查找到第一个和当前 key 不一样的即可：
+
+```go
+for ; scan.iter.Valid(); scan.iter.Next() {
+    nextUserKey := DecodeUserKey(scan.iter.Item().Key())
+    if !bytes.Equal(nextUserKey, currentUserkey) {
+        scan.next = nextUserKey
+        break
+    }
+}
+```
+
+实现了 `Scanner` 之后 `KvScan` 就没什么难的了。就在使用 `Scanner` 一个一个读的基础上，执行和先前 [KvGet](#KvGet) 一样的逻辑即可。
+
+#### KvCheckTxnStatus
+
+此方法是用来检查当前事务的状态。这一部分注释里把步骤写得很清楚了：
+
+- 先看是否有 write （commit 或 rollback），如果有则放回相应的信息。
+- 如果没有 write 则看 lock，如果没有 lock 则进行 rollback，并返回相应信息。
+- 最后查看 lock 是否已经过期了，如果过期了则进行 rollback，并返回相应信息。
+- 如果一切正常，则返回锁的 ttl。
+
+#### KvBatchRollback
+
+这个方法对请求里的 key 一一进行 rollback。主要注意以下几点：
+
+- 如果此 key 在当前事务中已经 write，则直接 abort，除非 write 类型是 rollback，这种情况下忽略。
+- 如果当前 key 已经被其他事务上锁，则 rollback 此 key。
+- 如果当前 key 没有 prewrite（写入 data 列，也就是 default 列族），则 rollback。
+- 如果锁为空，则 rollback 此 key。
+- 如果都不是上述情况，则直接对此 key 进行 rollback，删除 default 列族中的值与锁。
+
+#### KvResolveLock
+
+这个方法比较简单，就是收集到当前事务的所有 lock（上锁 ts == 事务 start_ts），然后根据请求里的 commit_version 字段来进行批量回滚（调用 `KvBatchRollback`）或者批量提交（调用 `KvCommit`）。
+
+## 参考
+
+- https://pdos.csail.mit.edu/6.824/papers/raft-extended.pdf （Project2A）
+- https://github.com/platoneko/tinykv （Project2B、Project2C）
+- https://web.stanford.edu/~ouster/cgi-bin/papers/OngaroPhD.pdf （Project3）
+- https://www.usenix.org/legacy/events/osdi10/tech/full_papers/Peng.pdf （Project4）
+- http://mysql.taobao.org/monthly/2018/11/02/ （Project4）
