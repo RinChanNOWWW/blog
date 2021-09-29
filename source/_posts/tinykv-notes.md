@@ -11,7 +11,7 @@ categories:
 
 我的实现：https://github.com/RinChanNOWWW/tinykv-impl
 
-PingCAP incubator 的项目，实现一个微型 TiKV。在此文章中记录一下开发中的值得注意的点。
+PingCAP incubator 的项目，实现一个微型 TiKV（以及 PD）。在此文章中记录一下开发中的值得注意的点。
 
 <!-- more -->
 
