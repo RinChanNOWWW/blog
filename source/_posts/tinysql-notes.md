@@ -21,4 +21,9 @@ TInyKV 之外的另一个 PingCAP incubator 的项目，实现一个微型 TiDB�
 
 ## Project 2
 
+本节利用 yacc 来进行 SQL 语法的补充，此 Project 中补充的是 Join 的语法，针对测试用例中的 join, left join, right join, join on 编写 yacc 文件即可。由于学编译原理时接触过这些所以很快就能上手，而且不会的话还可以看 [TiDB parser 的源码](https://github.com/pingcap/parser/)不是（
+
+## Project 3
+
 WIP
+
