@@ -25,5 +25,20 @@ TInyKV 之外的另一个 PingCAP incubator 的项目，实现一个微型 TiDB�
 
 ## Project 3
 
+本节实现了 SQL DDL 中删除一列的操作，具体来说是实现 F1 Schema 变更算法，具体参考[这篇文章](https://github.com/ngaut/builddatabase/blob/master/f1/schema-change.md)，这篇文章的例子是添加索引，这里需要实现删除列，所以状态的变更是反着的，应该为：
+
+``` 
+public --> write-only --> delete-only --> (reorg) --> absent
+```
+
+在 `public --> write-only` 阶段进行 `adjustColumnInfoInDropColumn`，因为这之后要被删除的 Col 已经不可被读了。
+
+## Project 4
+
 WIP
 
+## 参考
+
+- https://github.com/pingcap/parser
+- https://github.com/pingcap/tidb
+- https://github.com/ngaut/builddatabase/blob/master/f1/schema-change.md
