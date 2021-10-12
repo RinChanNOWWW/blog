@@ -94,6 +94,91 @@ for i := range c.table {
 
 ## Project 5
 
+这里有一个不是代码实现上的坑点，那就是 Part1、Part2 需要通过的测试都需要完成 3 个 Part 之后才能成功。因为这些单测中都存在 join 语句与聚合函数，需要分别完成 Part2 和 Part3 才行，如果没有看单测内容不容易发现问题所在……
+
+### Part 1
+
+#### 向量化字符串长度方法
+
+参考其他函数向量化方法编写，先获取数据，再编写主要逻辑：
+
+```go
+for i := 0; i < n; i++ {
+    if buf.IsNull(i) {
+        i64s[i] = 0
+    } else {
+        i64s[i] = int64(len(buf.GetBytes(i)))
+    }
+}
+```
+
+#### 为 SelectionExec 实现 Next 方法
+
+这里主要是指实现向量化的 Next。整体逻辑可以参考 `unBatchedNext` 方法，区别在于每次都是向量化批量处理，也就是说，和传统的 Volcano 模型的一次取一行相比，这里会通过一个 `selected` 数组一次取一批数据。这个 `selected` 数组通过调用 `VectorizedFilter` 即可从 children 中拿到。理解 Next 的关键就是当前 Executor 节点的 input 是通过其 children 的 Next 拿到，向量化的作用则是每次是拿一批数据而不单单只是一行。
+
+### Part 2
+
+实现并行 Hash Join 算法。
+
+#### fetchAndBuildHashTable
+
+这个不涉及并行（并发）所以比较好想。就是首先调用 `newHashRowContainer` 生成一个新的 hash table，然后通过循环调用 `Next` 从 inner table 中获取数据（chunk），再将数据放入 hash table，直至没有更多数据即可。
+
+主要逻辑：
+
+```go
+e.rowContainer = newHashRowContainer(e.ctx, int(e.innerSideEstCount), hCtx, initList)
+for {
+    chk := chunk.NewChunkWithCapacity(allTypes, e.ctx.GetSessionVars().MaxChunkSize)
+    err := Next(ctx, e.innerSideExec, chk)
+    if err != nil {
+        return err
+    }
+    if chk.NumRows() == 0 {
+        return nil
+    }
+    if err = e.rowContainer.PutChunk(chk); err != nil {
+        return err
+    }
+}
+```
+
+#### runJoinWorker
+
+负责拿取 outer table 的数据并 probe inner table 建立的 hash 表进行 join 操作，并返回交过到 main thread，以下是几个主要需要用的 channel 变量及其用法：
+
+- `closeCh`：用于结束 loop 的通道。
+- `outerResultChs[workerID]`：outer fetcher 通过此通道来向 join worker 分发任务。
+- `outerChkResourceCh`：用于返回本 worker 接收任务用的通道以及本 worker 用的 chunk，循环利用 chunk，避免重新分配内存。
+- `joinChkResourceCh`：outer table 的数据收集完毕后，通过此通道返回 hash join 的结果。
+
+主要逻辑：
+
+```go
+ok, joinResult := e.getNewJoinResult(workerID)
+if !ok {
+    return
+}
+for ok := true; ok; {
+    select {
+    case <-e.closeCh:
+        return
+    case outerResult, ok = <-e.outerResultChs[workerID]:
+    }
+    if !ok {
+        break
+    }
+    // 实际利用 hash table 进行 join
+    ok, joinResult = e.join2Chunk(workerID, outerResult, hCtx, joinResult, selected)
+    // ...
+}
+// ...
+// 返回数据，需要有判空以及判错等逻辑
+e.joinChkResourceCh[workerID] <- joinResult.chk
+```
+
+### Part 3
+
 WIP
 
 ## 参考
