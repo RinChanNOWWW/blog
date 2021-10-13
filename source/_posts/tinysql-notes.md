@@ -179,12 +179,22 @@ e.joinChkResourceCh[workerID] <- joinResult.chk
 
 ### Part 3
 
-WIP
+和上面的 Hash Join 类似，实现 Hash Aggregate。整体上的思路和 MapReduce 差不多，就是将整个计算任务分开，并分配给多个 PartialWorker，然后按照 Key   预聚合，再Shuffle 给不同的 FinalWorker 进行 Value 的聚合，最后再返回给 Main 组合成最终结果。与 MapReduce 的进程级通信不同，这里 worker 之间通过 channel 传递数据。
+
+#### shuffleIntermData
+
+使用 Hash 算法算出某个 Key 应该发给哪个 final worker，然后通过 channel 将这些 Key 发给那个 worker 即可。
+
+#### consumeIntermData
+
+通过 channel 拿到数据，再将数据聚合到对应的 Key 的位置即可。
+
+这里有一个小问题，就是在 *executor/aggregate_test.go* 的 `TestAggPushDown` 中第 4 条语句 `tk.MustExec("alter table t add index idx(a, b, c)")` （*executor/aggregate_test.go: 56*）会一直执行不出来，注释掉这一句即可 pass。在我写的全部代码中应该没有涉及索引 DDL 语句的修改，不知道是不是我的问题，也不好意思轻易地提 Issue。
 
 ## 参考
 
 - https://github.com/pingcap/parser (Project 2)
 - https://github.com/ngaut/builddatabase/blob/master/f1/schema-change.md (Project 3)
 - https://pingcap.com/zh/blog/tidb-cascades-planner (Project 4 Part 1)
-- https://github.com/pingcap/tidb (Project 3, Project 4)
 - https://pingcap.com/zh/blog/tidb-source-code-reading-12 （Project 4 Part 2）
+- https://github.com/pingcap/tidb (Project 3, Project 4, Project 5)
