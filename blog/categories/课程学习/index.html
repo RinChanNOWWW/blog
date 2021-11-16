@@ -114,7 +114,11 @@
   </nav>
 </div>
 
-  <div class="post-list post"><a class="post-card post " href="/attacklab/"><article class="md">
+  <div class="post-list post"><a class="post-card post " href="/6-s081-notes/"><article class="md">
+<h2 class="post-title">6.S081 笔记</h2><div class="excerpt"><p>记录一下学习 MIT 6.S081 与 xv6 book 时遇到的一些问题。
+LEC 1： Introduction
+为什么系统调用 exec 不直接和 fork 做成一块。因为要考虑到管道这种操作的情况，管道需要把前一个程序的标准输出定向到后一个程序的标准输入（使用 close、dup 等操作），由于子进程的文件描述符表和父进程独立，这样先 fork 再在子进程中 exec 就可以直接不用...</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2021-11-16T07:24:10.000Z">2021-11-16</time></span><span class="cap breadcrumb">课程学习</span><div>
+</article></a><a class="post-card post " href="/attacklab/"><article class="md">
 <h2 class="post-title">AttackLab</h2><div class="excerpt"><p>CSAPP ATTACKLAB 实验总结</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2018-12-08T05:51:01.000Z">2018-12-08</time></span><span class="cap breadcrumb">课程学习</span><div>
 </article></a><a class="post-card post " href="/learning-asm/"><article class="md">
 <h2 class="post-title">简单的汇编学习笔记与总结</h2><div class="excerpt"><p>根据CSAPP第三章内容与课堂讲义总结，默认是x86-64系统，C语言。这里讨论的都是整数。因为我比较菜，写的比较垃圾，争取自己复习的时候可以看懂。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2018-11-08T12:18:25.000Z">2018-11-08</time></span><span class="cap breadcrumb">课程学习</span><div>
