@@ -88,53 +88,10 @@
 
       
 
-  
-
-
-  <div class='nav-wrap'>
-  <nav class='sub post cap'>
-    
-      <a href='/'>近期发布</a>
-    
-    
-      
-        <a class='active' href='/blog/categories'>分类：编程开发</a>
-      
-    
-    
-      
-        <a href='/blog/tags'>标签</a>
-      
-    
-    
-      
-        <a href='/blog/archives'>归档</a>
-      
-    
-  </nav>
-</div>
-
-  <div class="post-list post"><a class="post-card post " href="/tinysql-notes/"><article class="md">
-<h2 class="post-title">TinySQL 实现笔记</h2><div class="excerpt"><p>原项目：https://github.com/tidb-incubator/tinysql
-我的实现：https://github.com/RinChanNOWWW/tinysql-impl
-TInyKV 之外的另一个 PingCAP incubator 的项目，实现一个微型 TiDB，即 TinySQL。正好十月中旬要参加 OB 的比赛，做这个刚好可以了解了解数据库 SQL 层的一些东西，这些在 CMU 15-445 的实验中没怎么深入。虽然 TiDB 的存储层是 KV 的形式，但是总体上的思想应该都大同小异。与之前 TinyKV 一样，这个文章用来做个笔记。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2021-09-29T06:17:39.000Z">2021-09-29</time></span><span class="cap breadcrumb">编程开发</span><div>
-</article></a><a class="post-card post " href="/tinykv-notes/"><article class="md">
-<h2 class="post-title">TinyKV 实现笔记</h2><div class="excerpt"><p>原项目：https://github.com/tidb-incubator/tinykv
-我的实现：https://github.com/RinChanNOWWW/tinykv-impl
-PingCAP incubator 的项目，实现一个微型 TiKV（以及 PD）。在此文章中记录一下开发中的值得注意的点。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2021-09-12T08:19:51.000Z">2021-09-12</time></span><span class="cap breadcrumb">编程开发</span><div>
-</article></a><a class="post-card post " href="/ruborute-dev-log/"><article class="md">
-<h2 class="post-title">ruborute 开发日志</h2><div class="excerpt"><p>作为一个 SDVX 玩家，有一天在水群的时候看到了一位群友发了一下自己做的统计得分数据的脚本，于是催生了自己做一个查分器的想法。于是就有了 ruborute 这个项目。它的读音为 “Are you 暴龍天(ぼるて, borute)?”。我打算用这个文章来记录我在开发过程中思路。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2021-08-29T12:01:59.000Z">2021-08-29</time></span><span class="cap breadcrumb">编程开发</span><div>
-</article></a><a class="post-card post " href="/cpp-type-traits/"><article class="md">
-<h2 class="post-title">C++ 类型萃取</h2><div class="excerpt"><p>最近在网上冲浪的时候注意到了 &lt;cmath&gt; 中 sqrt 这个求平方根的函数。与 C 语言中的不同，C++ 将它重定义为了模板函数。在使用过程中我发现，这个函数的模板特化只能用整数类型，如果是其他类型，则会编译报错。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2021-07-31T02:23:20.000Z">2021-07-31</time></span><span class="cap breadcrumb">编程开发</span><div>
-</article></a><a class="post-card post " href="/chrome-file-system-access/"><article class="md">
-<h2 class="post-title">File System Access API：简化访问本地文件</h2><div class="excerpt"><p>原文章：https://web.dev/file-system-access/
-原作者：Thomas Steiner（@tomayac）已同意转载。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2020-12-23T06:31:44.000Z">2020-12-23</time></span><span class="cap breadcrumb">编程开发</span><div>
-</article></a><a class="post-card post " href="/web-usb-connector/"><article class="md">
-<h2 class="post-title">使用 Chrome 浏览器连接 USB 设备</h2><div class="excerpt"><p>使用 Chrome 浏览器连接 USB 设备的一些总结。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2020-11-20T02:23:14.000Z">2020-11-20</time></span><span class="cap breadcrumb">编程开发</span><div>
-</article></a></div>
-  
-
-
+  @import 'partial/*'
+@import 'tag-plugins/*'
+@import 'sidebar/*'
+@import 'pages/*'
 
 
 
