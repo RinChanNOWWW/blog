@@ -88,10 +88,38 @@
 
       
 
-  @import 'partial/*'
-@import 'tag-plugins/*'
-@import 'sidebar/*'
-@import 'pages/*'
+  
+
+
+  <div class='nav-wrap'>
+  <nav class='sub post cap'>
+    
+      <a href='/'>近期发布</a>
+    
+    
+      
+        <a href='/blog/categories'>分类</a>
+      
+    
+    
+      
+        <a class='active' href='/blog/tags'>标签：Node.js</a>
+      
+    
+    
+      
+        <a href='/blog/archives'>归档</a>
+      
+    
+  </nav>
+</div>
+
+  <div class="post-list post"><a class="post-card post " href="/socket-io-issues/"><article class="md">
+<h2 class="post-title">Socket.io 踩坑记录</h2><div class="excerpt"><p>最近由于项目需要接触了 socket.io 这一套工具，它本身是一个 Node.js 的包，使用 long polling 或者 websocket 的方式（在我的项目中我是用的是 websocket）提供持续的网络连接服务。由于简单好用（虽然我在知乎上看到有人说这玩意儿就是给小白玩的，2333），很多开发者为其开发了不同语言的 SDK，比如 Java、C++、Go 等，然后我项目的前端用的 Node.js，后端用 Golang。由于 socket.io 本身的设计以及 Go 版本开源库的残缺，踩了很多坑，我决定在这篇博客中好好总结一下。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2020-12-31T10:40:20.000Z">2020-12-31</time></span><span class="cap breadcrumb">问题解决</span><div>
+</article></a></div>
+  
+
+
 
 
 
