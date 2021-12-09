@@ -31,3 +31,42 @@ categories:
 ## LEC 8: Page faults
 
 1. 这一章的内容相对简单，主要是讲了现代操作系统利用 page fault 可以做一些什么样的操作。基本都是利用 page fault 做一些内存相关的 lazy 的操作。也就是对于内存的分配，不是一开始就分配好的，而是通过 page fault 的触发来现分配内存，这样可以节约创建进程的开销（但是会带来对内存页写的开销）。主要思想就是，分配了内存地址范围之后，并不分配实际内存，当访存失败触发 page fault 时再分配内存。COW fork，demand paging 等都依靠这种方式实现。
+2. 在 COW 的 Lab 中有一些小细节需要注意，这个地方害得我 cowtest 中的 file 一直遇到问题（见下面代码块）。还有一个小的注意点是，在 `copyonwrite` 中，内存页 copy 之后需要对原物理地址页调用一次 `kfree` 来减去引用计数（或者单独写一个函数来控制引用计数，我这里是融合到了其他函数中），不然会出现内存未被正确清除干净的问题。
+
+    ```c
+    int
+    copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
+    {
+      uint64 n, va0, pa0;
+    
+      while(len > 0){
+        va0 = PGROUNDDOWN(dstva);
+        pa0 = walkaddr(pagetable, va0);
+        if(pa0 == 0)
+          return -1;
+    	
+        // 这里不能直接使用 PA2PTE(pa0),
+        // 因为这样 pte 不带标志位，必须要重新 walk
+        pte_t* pte = walk(pagetable, va0, 0); 
+        if (*pte & PTE_COW) {
+          if (copyonwrite(pagetable, va0) != 0) {
+            return -1;
+          }
+          // 这里也必须重新 walk，因为 copyonwrite 中可能重新分配了地址
+          pa0 = walkaddr(pagetable, va0);
+        }
+    
+        n = PGSIZE - (dstva - va0);
+        if(n > len)
+          n = len;
+        memmove((void *)(pa0 + (dstva - va0)), src, n);
+    
+        len -= n;
+        src += n;
+        dstva = va0 + PGSIZE;
+      }
+      return 0;
+    }
+    ```
+
+​		
