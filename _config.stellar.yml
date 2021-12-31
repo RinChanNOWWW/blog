@@ -2,3 +2,8 @@ sidebar:
   menu:
     post: '[博客](/)'
     about: '[关于](/about/)'
+
+comments:
+  service: beaudar
+  beaudar:
+    repo: RinChanNOWWW/blog-comments
