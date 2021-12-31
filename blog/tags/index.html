@@ -268,6 +268,14 @@
           <span class='name'>操作系统 - C - 公开课</span>
         </a>
       
+        <a class='tag' href="/blog/tags/hackthon/">
+          <span class='name'>Hackthon</span>
+        </a>
+      
+        <a class='tag' href="/blog/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/">
+          <span class='name'>数据库</span>
+        </a>
+      
     </article>
   </div>
 
@@ -419,6 +427,34 @@
 
 
 <!-- optional -->
+
+  <script>
+  function loadBeaudar() {
+    const els = document.querySelectorAll("#comments #beaudar");
+    if (els.length === 0) return;
+    els.forEach((el, i) => {
+      try {
+        el.innerHTML = '';
+      } catch (error) {
+        console.log(error);
+      }
+      var script = document.createElement('script');
+      script.src = 'https://beaudar.lipk.org/client.js';
+      script.async = true;
+      for (let key of Object.keys(el.attributes)) {
+        let attr = el.attributes[key];
+        if (['class', 'id'].includes(attr.name) === false) {
+          script.setAttribute(attr.name, attr.value);
+        }
+      }
+      el.appendChild(script);
+    });
+  }
+  window.addEventListener('DOMContentLoaded', (event) => {
+      loadBeaudar();
+  });
+</script>
+
 
 
 

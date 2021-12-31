@@ -112,7 +112,9 @@
   </nav>
 </div>
 
-  <div class="post-list post"><a class="post-card post " href="/develop-with-issues-on-windows/"><article class="md">
+  <div class="post-list post"><a class="post-card post " href="/2021-4-20-tx-interview/"><article class="md">
+<h2 class="post-title">2021年4月20日 TEG 云架构部门面经</h2><div class="excerpt"><p>2021年4月20日 TEG 云架构部门面经</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2021-04-20T10:53:13.000Z">2021-04-20</time></span><span class="cap breadcrumb">面经</span><div>
+</article></a><a class="post-card post " href="/develop-with-issues-on-windows/"><article class="md">
 <h2 class="post-title">用 Windows 开发遇到的各种问题</h2><div class="excerpt"><p>自从之前那段实习结束之后，我的日常开发就转变成了 Windows 10 + WSL2 的方式。刚开始的时候还觉得特爽，等新鲜感过去，这种模式成为常态之后， Windows 以及 WSL2 的各种毛病都逐渐涌现了出来。为了防止我之后再次遇到又变得一筹莫展，我将在这个文章里记录我使用 Windows 10 开发所遇到的各种问题（大概是会持续更新的……）。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2021-04-01T01:33:42.000Z">2021-04-01</time></span><span class="cap breadcrumb">问题解决</span><div>
 </article></a><a class="post-card post " href="/k8s-vm-restart/"><article class="md">
 <h2 class="post-title">记一次虚拟机搭建 k8s 集群踩的坑</h2><div class="excerpt"><p>毕设开发中使用 k8s 遇到的一些问题与解决办法。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2021-03-07T05:47:17.000Z">2021-03-07</time></span><span class="cap breadcrumb">问题解决</span><div>
@@ -123,8 +125,6 @@
 </article></a><a class="post-card post " href="/chrome-file-system-access/"><article class="md">
 <h2 class="post-title">File System Access API：简化访问本地文件</h2><div class="excerpt"><p>原文章：https://web.dev/file-system-access/
 原作者：Thomas Steiner（@tomayac）已同意转载。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2020-12-23T06:31:44.000Z">2020-12-23</time></span><span class="cap breadcrumb">编程开发</span><div>
-</article></a><a class="post-card post " href="/web-usb-connector/"><article class="md">
-<h2 class="post-title">使用 Chrome 浏览器连接 USB 设备</h2><div class="excerpt"><p>使用 Chrome 浏览器连接 USB 设备的一些总结。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2020-11-20T02:23:14.000Z">2020-11-20</time></span><span class="cap breadcrumb">编程开发</span><div>
 </article></a></div>
   
   <div class='paginator-wrap dis-select'>
@@ -132,7 +132,7 @@
       <img src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/arrow/f049bbd4e88ec.svg'/>
     </a>
     <div class='paginator current'>
-      2<span class='sep'></span>4
+      2<span class='sep'></span>5
     </div>
     <a class='paginator next' href='/page/3/'>
       <img src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/arrow/064b95430caf4.svg'/>
@@ -289,6 +289,34 @@
 
 
 <!-- optional -->
+
+  <script>
+  function loadBeaudar() {
+    const els = document.querySelectorAll("#comments #beaudar");
+    if (els.length === 0) return;
+    els.forEach((el, i) => {
+      try {
+        el.innerHTML = '';
+      } catch (error) {
+        console.log(error);
+      }
+      var script = document.createElement('script');
+      script.src = 'https://beaudar.lipk.org/client.js';
+      script.async = true;
+      for (let key of Object.keys(el.attributes)) {
+        let attr = el.attributes[key];
+        if (['class', 'id'].includes(attr.name) === false) {
+          script.setAttribute(attr.name, attr.value);
+        }
+      }
+      el.appendChild(script);
+    });
+  }
+  window.addEventListener('DOMContentLoaded', (event) => {
+      loadBeaudar();
+  });
+</script>
+
 
 
 

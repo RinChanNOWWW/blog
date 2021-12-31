@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+
+<head>
+  <meta name="generator" content="Hexo 5.4.0">
+  <meta charset="utf-8">
+  
+
+  <meta http-equiv='x-dns-prefetch-control' content='on' />
+  <link rel='dns-prefetch' href='https://cdn.jsdelivr.net'>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+  <meta name="renderer" content="webkit">
+  <meta name="force-rendering" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  <meta name="HandheldFriendly" content="True" >
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#f8f8f8">
+  <title>TiDB Flashback 之 MVCC Query 的实现思路 - リン屋</title>
+
+  
+    <meta name="description" content="有幸和 @disking 与 @JmPotato 两位哥哥一同参加了今年（2021）TiDB 社区举办的 Hackthon。我们的项目简单来说就是基于 TiDB 的 MVCC 的特性实现一些新的功能。项目的 RFC 文档：https:&#x2F;&#x2F;github.com&#x2F;Long-Live-the-DoDo&#x2F;rfc 。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="TiDB Flashback 之 MVCC Query 的实现思路">
+<meta property="og:url" content="https://github.com/RinChanNOWWW/tidb-flash-mvcc-query/">
+<meta property="og:site_name" content="リン屋">
+<meta property="og:description" content="有幸和 @disking 与 @JmPotato 两位哥哥一同参加了今年（2021）TiDB 社区举办的 Hackthon。我们的项目简单来说就是基于 TiDB 的 MVCC 的特性实现一些新的功能。项目的 RFC 文档：https:&#x2F;&#x2F;github.com&#x2F;Long-Live-the-DoDo&#x2F;rfc 。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/mvcc_query_in_tidb.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/mvcc_query_in_tikv.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/select.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/update.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/delete.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/update_after_delete.png">
+<meta property="article:published_time" content="2021-12-30T10:59:05.000Z">
+<meta property="article:modified_time" content="2021-12-30T10:59:05.000Z">
+<meta property="article:author" content="RinChanNOW">
+<meta property="article:tag" content="Hackthon">
+<meta property="article:tag" content="数据库">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/mvcc_query_in_tidb.png">
+  
+  
+
+  <!-- feed -->
+  
+
+  
+    
+<link rel="stylesheet" href="/css/main.css">
+
+  
+
+  
+
+  
+</head>
+
+<body>
+  
+
+
+  <div class='l_body' id='start'>
+    <aside class='l_left' layout='post'>
+    
+
+
+<header class="header">
+
+<div class="logo-wrap"><a class="avatar" href="/about/"><div class="bg" style="opacity:0;background-image:url(https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.2/avatar/round/rainbow64@3x.webp);"></div><img no-lazy class="avatar" src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/profile/avatar.jpg" onerror="javascript:this.classList.add('error');this.src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/image/2659360.svg';"></a><a class="title" href="/"><div class="main">リン屋</div><div class="sub cap">RinChanNOW's blog</div></a></div>
+<nav class="menu dis-select"><a class="nav-item active" href="/">博客</a><a class="nav-item" href="/about/">关于</a></nav></header>
+
+<div class="widgets">
+
+<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%87%86%E5%A4%87%E5%B7%A5%E4%BD%9C"><span class="toc-text">准备工作</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#TiDB-%E4%BE%A7%E5%AE%9E%E7%8E%B0"><span class="toc-text">TiDB 侧实现</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9F%A5%E8%AF%A2%E8%AE%A1%E5%88%92%E6%9E%84%E5%BB%BA%E5%BC%95%E5%85%A5%E8%99%9A%E6%8B%9F%E5%88%97"><span class="toc-text">查询计划构建引入虚拟列</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#NeedMvcc-%E6%A0%87%E5%BF%97"><span class="toc-text">NeedMvcc 标志</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%85%B6%E4%BB%96"><span class="toc-text">其他</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#TiKV-%E4%BE%A7%E5%AE%9E%E7%8E%B0"><span class="toc-text">TiKV 侧实现</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9E%84%E9%80%A0-executor-%E5%8F%8A%E5%85%B6%E4%B8%AD%E7%9A%84-scanner"><span class="toc-text">构造 executor 及其中的 scanner</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#scanner-%E8%BF%AD%E4%BB%A3%E8%8E%B7%E5%8F%96%E6%95%B0%E6%8D%AE"><span class="toc-text">scanner 迭代获取数据</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%89%A7%E8%A1%8C%E6%95%88%E6%9E%9C"><span class="toc-text">执行效果</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BF%98%E5%8F%AF%E4%BB%A5%E7%BB%A7%E7%BB%AD%E5%AE%8C%E5%96%84%E7%9A%84%E7%82%B9"><span class="toc-text">还可以继续完善的点</span></a></li></ol></div></div></div>
+
+
+</div>
+
+
+    </aside>
+    <div class='l_main'>
+      
+
+      
+
+
+<div class="bread-nav fs12"><div id="breadcrumb"><a class="cap breadcrumb" href="/">主页</a><span class="sep"></span><a class="cap breadcrumb" href="/">文章</a><span class="sep"></span><a class="cap breadcrumb-link" href="/blog/categories/%E7%BC%96%E7%A8%8B%E5%BC%80%E5%8F%91/">编程开发</a></div><div id="post-meta">发布于&nbsp;<time datetime="2021-12-30T10:59:05.000Z">2021-12-30</time></div></div>
+
+<article class='content md post'>
+<h1 class="article-title"><span>TiDB Flashback 之 MVCC Query 的实现思路</span></h1>
+<p>有幸和 <a href="https://github.com/disksing">@disking</a> 与 <a href="https://github.com/JmPotato">@JmPotato</a> 两位哥哥一同参加了今年（2021）TiDB 社区举办的 Hackthon。我们的项目简单来说就是基于 TiDB 的 MVCC 的特性实现一些新的功能。项目的 RFC 文档：<a href="https://github.com/Long-Live-the-DoDo/rfc">https://github.com/Long-Live-the-DoDo/rfc</a> 。</p>
+<span id="more"></span>
+
+<p>在本项目我负责第一个功能点：MVCC Query in SQL。简单来说就是为 TiDB 的数据表增加两个虚拟列 <code>_tidb_mvcc_ts</code> 与 <code>_tidb_mvcc_op</code>。众所周知，TiDB 中每一个数据表中的数据都是以 Key-Value 的形式存放在 TiKV 中，Key 是一条行记录的标识，它带有 MVCC 版本信息（ts）；而 Value 就是这一条行记录的具体内容，它多列的数据拼接而成。TiDB 在读取数据时只会读取当前事务下能看到的最新数据，而我要做的就是能让它看到所有版本的数据。</p>
+<p>一言以蔽之，我要实现的便是当 SQL 语句中存在 <code>_tidb_mvcc_ts</code> 或 <code>_tidb_mvcc_op</code> 两列时，会查询到所有的历史版本（以及它们的 MVCC 时间戳与操作类型）。</p>
+<h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><p>除了 TiDB 与 TiKV 的开发环境准备之外，需要做的一个准备工作就是了解 TiDB 和 TiKV 的代码结构与它们的数据流，也就是要去大致了解它们的源码，而这也是最耗时间的一个过程，所以我的代码量并不大，但是却花了很长时间才写完。</p>
+<p>于是我根据我需要改动的部分，结合 PingCAP 的官方博客，对源码进行了一波学习：</p>
+<ul>
+<li>Select 流程：<ul>
+<li><a target="_blank" rel="noopener" href="https://pingcap.com/zh/blog/tidb-source-code-reading-3">TiDB 源码阅读系列文章（三）SQL 的一生</a>   </li>
+<li><a target="_blank" rel="noopener" href="https://pingcap.com/zh/blog/tidb-source-code-reading-6">TiDB 源码阅读系列文章（六）Select 语句概览</a></li>
+</ul>
+</li>
+<li>如何将查询下推到 TiKV 并执行：<ul>
+<li><a target="_blank" rel="noopener" href="https://pingcap.com/zh/blog/tikv-source-code-reading-14">TiKV 源码解析系列文章（十四）Coprocessor 概览</a></li>
+<li><a target="_blank" rel="noopener" href="https://pingcap.com/zh/blog/tikv-source-code-reading-16">TiKV 源码解析系列文章（十六）TiKV Coprocessor Executor 源码解析</a></li>
+</ul>
+</li>
+<li>Insert 流程：<ul>
+<li><a target="_blank" rel="noopener" href="https://pingcap.com/zh/blog/tidb-source-code-reading-4">TiDB 源码阅读系列文章（四）Insert 语句概览</a></li>
+<li><a target="_blank" rel="noopener" href="https://pingcap.com/zh/blog/tidb-source-code-reading-16">TiDB 源码阅读系列文章（十六）INSERT 语句详解</a></li>
+</ul>
+</li>
+<li>一条 SQL 语句的具体执行流程：<ul>
+<li><a target="_blank" rel="noopener" href="https://pingcap.com/zh/blog/tidb-source-code-reading-23">TiDB 源码阅读系列文章（二十三）Prepare/Execute 请求处理</a></li>
+</ul>
+</li>
+<li>TiKV MVCC 读写流程：<ul>
+<li><a target="_blank" rel="noopener" href="https://pingcap.com/zh/blog/tikv-source-code-reading-13">TiKV 源码解析系列文章（十三）MVCC 数据读取</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="TiDB-侧实现"><a href="#TiDB-侧实现" class="headerlink" title="TiDB 侧实现"></a>TiDB 侧实现</h2><p>TiDB 负责 SQL 语句的解析与查询计划的构建。所以 TiDB 侧的修改主要分为两个部分：第一个是查询计划构建引入虚拟列，第二个是提示 TiKV 需要读取所有版本的数据。下图是 TiDB 中需要修改的部分：</p>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/mvcc_query_in_tidb.png" alt="mvcc_query_in_tidb"></p>
+<h3 id="查询计划构建引入虚拟列"><a href="#查询计划构建引入虚拟列" class="headerlink" title="查询计划构建引入虚拟列"></a>查询计划构建引入虚拟列</h3><p>以 <code>select _tidb_mvcc_ts from t</code> 为例，当 <code>PlanBuilder</code> 读取到 <code>t</code> 时，它会调用 <a href="https://github.com/Long-Live-the-DoDo/tidb/blob/3e4bc47d0d247ec81a09ed9eb6bb7c3e3137797c/planner/core/logical_plan_builder.go#L3953">buildDataSource</a> 为查询计划构造逻辑上的数据源（也就是要查询的表），如果这里不做任何处理，当 TiDB 执行前进行各种元信息（比如查询的列是否存在等）时就会认为 <code>_tidb_mvcc_ts</code> 不是表 <code>t</code> 的列，从而执行失败，所以我们只需要在 <code>buildDataSource</code> 的时候加入虚拟列即可，让 TiDB 认为这个表就是有 <code>_tidb_mvcc_ts</code> 和 <code>_tidb_mvcc_op</code> 这两列的：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// planner/core/logical_plan_builder.go</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(b *PlanBuilder)</span> <span class="title">buildDataSource</span><span class="params">(ctx context.Context, tn *ast.TableName, asName *model.CIStr)</span> <span class="params">(LogicalPlan, error)</span></span> &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">    <span class="comment">// add _tidb_mvcc_ts to columns.</span></span><br><span class="line">    mvccTsCol := ds.newExtraMVCCTsSchemaCol()</span><br><span class="line">    ds.Columns = <span class="built_in">append</span>(ds.Columns, model.NewExtraMVCCTsColInfo())</span><br><span class="line">    schema.Append(mvccTsCol)</span><br><span class="line">    names = <span class="built_in">append</span>(names, &amp;types.FieldName&#123;</span><br><span class="line">        DBName:      dbName,</span><br><span class="line">        TblName:     tableInfo.Name,</span><br><span class="line">        ColName:     model.ExtraMVCCTsName,</span><br><span class="line">        OrigColName: model.ExtraMVCCTsName,</span><br><span class="line">    &#125;)</span><br><span class="line">    ds.TblCols = <span class="built_in">append</span>(ds.TblCols, mvccTsCol)</span><br><span class="line">    <span class="comment">// add _tidb_mvcc_op to columns.</span></span><br><span class="line">    mvccOpCol := ds.newExtraMVCCOpSchemaCol()</span><br><span class="line">    ds.Columns = <span class="built_in">append</span>(ds.Columns, model.NewExtraMVCCOpColInfo())</span><br><span class="line">    schema.Append(mvccOpCol)</span><br><span class="line">    names = <span class="built_in">append</span>(names, &amp;types.FieldName&#123;</span><br><span class="line">        DBName:      dbName,</span><br><span class="line">        TblName:     tableInfo.Name,</span><br><span class="line">        ColName:     model.ExtraMVCCOpName,</span><br><span class="line">        OrigColName: model.ExtraMVCCOpName,</span><br><span class="line">    &#125;)</span><br><span class="line">    ds.TblCols = <span class="built_in">append</span>(ds.TblCols, mvccOpCol)</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其中与 MVCC 有关的数据结构与函数都是本次新加入的。</p>
+<h3 id="NeedMvcc-标志"><a href="#NeedMvcc-标志" class="headerlink" title="NeedMvcc 标志"></a>NeedMvcc 标志</h3><p>我在查询计划构建的过程中引入了 <code>NeedMvcc</code> 标志来标记本次查询是否需要 MVCC 信息。具体来说，是在遍历语法树生成查询计划时，如果遇到了 <code>_tidb_mvcc_ts</code> 或 <code>_tidb_mvcc_op</code>，则将这个标识即为 <code>true</code>。这里的实现比较简单粗暴，直接将 <code>NeedMvcc</code> 存到了 <code>SessionCtx</code> 中，也就是存到了整个 <code>Session</code> 的上下文中（所以用完之后需要清理为 <code>false</code>）。我觉得更优雅的方式是存放到 <code>LogicPlan</code> 与 <code>PhysicPlan</code> 中，然后层层传递到 <code>Executor</code>，但为了简单快捷的实现，我就直接放到了会话上下文中。</p>
+<p>设置 <code>NeedMvcc</code> 具体发生在 <code>exoressionRewriter</code> 这个 <code>Visitor</code> 执行 <a href="https://github.com/Long-Live-the-DoDo/tidb/blob/3e4bc47d0d247ec81a09ed9eb6bb7c3e3137797c/planner/core/expression_rewriter.go#L1042">Leave</a> 时，如果它需要接受的原本的语法树节点是 <code>ast.ColumnNameExpr</code> 类型，也就是列名时，我们可以检查这个列名是否是 <code>_tidb_mvcc_ts</code> 或 <code>_tidb_mvcc_op</code>，如果是，则将 <code>NeedMvcc</code> 设置为 <code>true</code>，否则不变：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// planner/core/expression_rewriter.go</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// Leave implements Visitor interface.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(er *expressionRewriter)</span> <span class="title">Leave</span><span class="params">(originInNode ast.Node)</span> <span class="params">(retNode ast.Node, ok <span class="keyword">bool</span>)</span></span> &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">    <span class="keyword">case</span> v := inNode.(<span class="keyword">type</span>) &#123;</span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">        <span class="keyword">case</span> *ast.ColumnNameExpr:</span><br><span class="line">            <span class="keyword">if</span> v.Name.Name.L == model.ExtraMVCCOpName.L || v.Name.Name.L == model.ExtraMVCCTsName.L &#123;</span><br><span class="line">                er.sctx.GetSessionVars().NeedMvcc = <span class="literal">true</span></span><br><span class="line">            &#125;</span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>接下来就是在通过物理计划构造 <code>Executor</code> 并构造对 TiKV 的 RPC 请求时，加入 <code>NeedMVCC</code> 这个标识字段即可：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// planner/core/plan_to_pb.go</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// ToPB implements PhysicalPlan ToPB interface.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(p *PhysicalTableScan)</span> <span class="title">ToPB</span><span class="params">(ctx sessionctx.Context, storeType kv.StoreType)</span> <span class="params">(*tipb.Executor, error)</span></span> &#123;</span><br><span class="line">    tsExec := tables.BuildTableScanFromInfos(p.Table, p.Columns, ctx.GetSessionVars().NeedMvcc)</span><br><span class="line">    <span class="comment">// clear the need mvcc flag</span></span><br><span class="line">    ctx.GetSessionVars().NeedMvcc = <span class="literal">false</span></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// table/tables/tables.go</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// BuildTableScanFromInfos build tipb.TableScan with *model.TableInfo and *model.ColumnInfo.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">BuildTableScanFromInfos</span><span class="params">(tableInfo *model.TableInfo, columnInfos []*model.ColumnInfo, needMvcc <span class="keyword">bool</span>)</span> *<span class="title">tipb</span>.<span class="title">TableScan</span></span> &#123;</span><br><span class="line">    pkColIds := TryGetCommonPkColumnIds(tableInfo)</span><br><span class="line">    tsExec := &amp;tipb.TableScan&#123;</span><br><span class="line">        TableId:          tableInfo.ID,</span><br><span class="line">        Columns:          util.ColumnsToProto(columnInfos, tableInfo.PKIsHandle),</span><br><span class="line">        PrimaryColumnIds: pkColIds,</span><br><span class="line">        NeedMvcc:         needMvcc,</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>接下来就可以交给 TiKV 来管了。对于 SQL 语句中的投影，选择等操作，无需修改，本身是兼容的。只要我们能够拿到想要的数据，构造好了想要的数据表 Schema，就可以实现剩余的功能。</p>
+<h3 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h3><p>由于在后续 TiKV 读取行数据写入 MVCC 信息的实现中（见下文），采用了原始的简单编码方式（colID1 typed_value1 colID2 typed_value…），所以需要统一 TiDB 和 TiKV 的存储数据编解码方式。为了简单起见，我直接抛弃了 TiDB 新引入的编码方式：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// tablecodec/tablecodec.go</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// EncodeRow encode row data and column ids into a slice of byte.</span></span><br><span class="line"><span class="comment">// valBuf and values pass by caller, for reducing EncodeRow allocates temporary bufs. If you pass valBuf and values as nil,</span></span><br><span class="line"><span class="comment">// EncodeRow will allocate it.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">EncodeRow</span><span class="params">(sc *stmtctx.StatementContext, row []types.Datum, colIDs []<span class="keyword">int64</span>, valBuf []<span class="keyword">byte</span>, values []types.Datum, e *rowcodec.Encoder)</span> <span class="params">([]<span class="keyword">byte</span>, error)</span></span> &#123;</span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(row) != <span class="built_in">len</span>(colIDs) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span>, errors.Errorf(<span class="string">&quot;EncodeRow error: data and columnID count not match %d vs %d&quot;</span>, <span class="built_in">len</span>(row), <span class="built_in">len</span>(colIDs))</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// For hackthon: disable the new encoding mode.</span></span><br><span class="line">    <span class="comment">// if e.Enable &#123;</span></span><br><span class="line">    <span class="comment">// 	return e.Encode(sc, colIDs, row, valBuf)</span></span><br><span class="line">    <span class="comment">// &#125;</span></span><br><span class="line">    <span class="keyword">return</span> EncodeOldRow(sc, row, colIDs, valBuf, values)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>TiDB 侧所有修改见 <a href="https://github.com/Long-Live-the-DoDo/tidb/pull/1">https://github.com/Long-Live-the-DoDo/tidb/pull/1</a> 。</p>
+<h2 id="TiKV-侧实现"><a href="#TiKV-侧实现" class="headerlink" title="TiKV 侧实现"></a>TiKV 侧实现</h2><p>通过阅读 Coprocessor 的相关源码可以得知，整个 <code>select</code> 语句的执行过程可以大致拆分为：</p>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/mvcc_query_in_tikv.png" alt="mvcc_query_in_tikv"></p>
+<h3 id="构造-executor-及其中的-scanner"><a href="#构造-executor-及其中的-scanner" class="headerlink" title="构造 executor 及其中的 scanner"></a>构造 executor 及其中的 scanner</h3><ol>
+<li>首先通过通过 <a href="https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/components/tidb_query_executors/src/runner.rs#L153">build_executors</a> 构造 <code>executor</code>。由于 <code>select</code> 语句对应的是 <code>ExecType::TypeTableScan</code>，所以相应的 <code>executor</code> 会通过 <a href="https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/components/tidb_query_executors/src/table_scan_executor.rs#L36">BatchTableScanExecutor::new</a> 生成。而 <code>build_executors</code> 这里可以获取到 TiDB 发来的 RPC 请求，我们便可以从请求中提取出 <code>NeedMvcc</code> 字段传给 <code>BatchTableScanExecutor</code> 以便后续使用。</li>
+<li>在 <code>BatchTableScanExecutor</code> 中，又会调用 <a href="https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/components/tidb_query_executors/src/util/scan_executor.rs#L63">ScanExecutor::new</a> 生成一个 scanner wrapper。于是再将依次将 <code>NeedMvcc</code> 传递给 <code>ScanExecutor</code> 这个 wrapper。</li>
+<li>由于 <code>ScanExecutor</code> 只是个 wrapper，所以它还会将内部的实际 scanner 定义为 <a href="https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/components/tidb_query_common/src/storage/scanner.rs#L42">RangeScanner</a>。于是再将 <code>NeedMvcc</code> 传递给 <code>RangeScanner</code> 保存起来。当之后 <code>RangeScanner</code> 执行 scan 逻辑时便可以获取到 <code>NeedMvcc</code> 了。</li>
+<li>第一次 scan 时，<code>RangeScanner</code> 会通过会调用内部成员 <code>storage</code> 的 <code>begin_scan</code> 接口。而 <code>RangeScanner</code> 中的 <code>storage</code> 实际上是 <a href="https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/src/coprocessor/dag/storage_impl.rs#L14">TiKVStorage</a>。</li>
+<li>在 <a href="https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/src/coprocessor/dag/storage_impl.rs#L39">TiKVStorage::begin_scan</a> 中，又会根据 <code>TiKVSttorage&lt;S: Store&gt;</code> 的内部成员 <code>store: S</code> 的类型生成其对应的 scanner。这里的 <code>store</code> 其实是 <a href="https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/src/storage/txn/store.rs#L261">SnapshotStore</a>。<code>TiKVStorage</code> 会通过 <a href="https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/src/storage/txn/store.rs#L354">SnapshotStore::scanner</a> 生成最终访问物理存储的 scanner。于是 <code>NeedMvcc</code> 就可以通过 <code>begin_scan</code> 函数调用传递给 <code>SnapshotStore::scanner</code> 构造相应的 scanner 了。</li>
+<li><code>SnapshotStore::scanner</code> 通过 <a href="https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/src/storage/mvcc/reader/scanner/mod.rs#L26">ScannerBuilder</a> 按照需求构造相应的 scanner。在原本的实现了两种 scanner：<code>Scanner::Forward</code> 与 <code>Scanner::Backward</code>，分别用于顺序和逆序扫描，并提供 <code>next</code> 接口返回每一次迭代读到的 Key-Value 值。于是我就知道了，我这里需要新增一个 <code>Scanner::ForwardWithMvcc</code> 来用于在顺序扫描中返回所有版本的 Key-Value。</li>
+</ol>
+<p>我找到这条调用链其实是个逆序的过程，先找到最基本的 scanner，再向上溯源找到最基本的调用者。</p>
+<h3 id="scanner-迭代获取数据"><a href="#scanner-迭代获取数据" class="headerlink" title="scanner 迭代获取数据"></a>scanner 迭代获取数据</h3><ol>
+<li>构造完 executor 后就可以开始执行了。对于 <code>select</code> 也就是 <code>TableScan</code> 来说，对于每一行数据的读取实际上就是不断调用 <a href="https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/src/storage/mvcc/reader/scanner/forward.rs#L168">ForwardScanner::read_next</a> 这个方法（拿顺序遍历举例）。</li>
+<li><code>read_next</code> 方法会按照 Key 遍历 <code>write</code> 列族拿到 write 的值，然后再通过 <code>handle_write</code> 方法执行迭代器读取数据的实际逻辑。所以说，我们最终的目的就是为 <code>Scanner::ForwardWithMvcc</code> 实现它的 <code>handle_write</code> 方法。</li>
+<li><code>handle_write</code> 的执行逻辑因 <code>Scanner</code> 采用的 <a href="https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/src/storage/mvcc/reader/scanner/forward.rs#L18">ScanPolicy</a> 而异。我们要实现的 <a href="https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/src/storage/mvcc/reader/scanner/forward.rs#L487">WithMvccInfoPolicy</a> 和原本的 <code>Scanner::Forward</code> 使用的 <a href="https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/src/storage/mvcc/reader/scanner/forward.rs#L365">LatestKvPolicy</a> 基本完全一致。<code>LatestKvPolicy</code> 遇到某 user key 的最新版本 value 时，会返回这个 value，并通过调用</li>
+</ol>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/storage/mvcc/reader/scanner/forward.rs</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">impl</span>&lt;S: Snapshot&gt; ScanPolicy&lt;S&gt; <span class="keyword">for</span> LatestKvPolicy &#123;</span><br><span class="line">    <span class="function"><span class="keyword">fn</span> <span class="title">handle_write</span></span>(</span><br><span class="line">        &amp;<span class="keyword">mut</span> <span class="keyword">self</span>,</span><br><span class="line">        current_user_key: Key,</span><br><span class="line">        _: TimeStamp,</span><br><span class="line">        cfg: &amp;<span class="keyword">mut</span> ScannerConfig&lt;S&gt;,</span><br><span class="line">        cursors: &amp;<span class="keyword">mut</span> Cursors&lt;S&gt;,</span><br><span class="line">        statistics: &amp;<span class="keyword">mut</span> Statistics,</span><br><span class="line">    ) -&gt; <span class="built_in">Result</span>&lt;HandleRes&lt;Self::Output&gt;&gt; &#123;</span><br><span class="line">        <span class="comment">// find the next value</span></span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">        cursors.move_write_cursor_to_next_user_key(&amp;current_user_key, statistics)?;</span><br><span class="line">        <span class="comment">// return the value</span></span><br><span class="line">        <span class="literal">Ok</span>(<span class="keyword">match</span> value &#123;</span><br><span class="line">            <span class="literal">Some</span>(v) =&gt; HandleRes::Return((current_user_key, v)),</span><br><span class="line">            _ =&gt; HandleRes::Skip(current_user_key),</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>跳过这个 user key 之下所有之前的老版本。在 <code>WithMvccInfoPolicy</code> 下，我们并不采用这个逻辑，而是继续往下读。</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/storage/mvcc/reader/scanner/forward.rs</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">impl</span>&lt;S: Snapshot&gt; ScanPolicy&lt;S&gt; <span class="keyword">for</span> WithMvccInfoPolicy &#123;</span><br><span class="line">    <span class="function"><span class="keyword">fn</span> <span class="title">handle_write</span></span>(</span><br><span class="line">        &amp;<span class="keyword">mut</span> <span class="keyword">self</span>,</span><br><span class="line">        current_user_key: Key,</span><br><span class="line">        commit_ts: TimeStamp,</span><br><span class="line">        cfg: &amp;<span class="keyword">mut</span> ScannerConfig&lt;S&gt;,</span><br><span class="line">        cursors: &amp;<span class="keyword">mut</span> Cursors&lt;S&gt;,</span><br><span class="line">        statistics: &amp;<span class="keyword">mut</span> Statistics,</span><br><span class="line">    ) -&gt; <span class="built_in">Result</span>&lt;HandleRes&lt;Self::Output&gt;&gt; &#123;</span><br><span class="line">        <span class="comment">// find the next value</span></span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">        <span class="comment">// do not move write cursor to next user key,</span></span><br><span class="line">        <span class="comment">// but move to next key.</span></span><br><span class="line">        cursors.write.next(&amp;<span class="keyword">mut</span> statistics.write);</span><br><span class="line">        <span class="comment">// add mvcc info and return the value</span></span><br><span class="line">        <span class="literal">Ok</span>(<span class="keyword">match</span> value &#123;</span><br><span class="line">            <span class="literal">Some</span>(<span class="keyword">mut</span> v) =&gt; &#123;</span><br><span class="line">                <span class="keyword">self</span>.append_row_with_mvcc_info(&amp;<span class="keyword">mut</span> v, commit_ts, write_type)?;</span><br><span class="line">                HandleRes::Return((current_user_key, v))</span><br><span class="line">            &#125;</span><br><span class="line">            _ =&gt; &#123;</span><br><span class="line">                <span class="keyword">if</span> write_type == WriteType::Delete &#123;</span><br><span class="line">                    <span class="keyword">let</span> <span class="keyword">mut</span> v = <span class="built_in">vec!</span>[];</span><br><span class="line">                    <span class="keyword">self</span>.append_row_with_mvcc_info(&amp;<span class="keyword">mut</span> v, commit_ts, write_type)?;</span><br><span class="line">                    HandleRes::Return((current_user_key, v))</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    HandleRes::Skip(current_user_key)</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>WithMvccInfoPolicy</code> 还有一点不同的是，遇到 <code>Delete</code> 的时，它也会返回一个 value。</p>
+<ol start="4">
+<li><code>WithMvccInfoPolicy</code> 中的 <code>handle_write</code> 在返回 value 之前，还需要为 value 中添加入 <code>_tidb_mvcc_ts</code> 与 <code>_tidb_mvcc_op</code> 这两个虚拟列的数据。就像上面 TiDB 侧的实现中所说，这里采用了一种简单粗暴的编码方式，直接将 [colID, typed_value] 依次编码进最后的 value 字节数组中。</li>
+</ol>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">impl</span> WithMvccInfoPolicy &#123;</span><br><span class="line">    <span class="function"><span class="keyword">fn</span> <span class="title">append_row_with_mvcc_info</span></span>(</span><br><span class="line">        &amp;<span class="keyword">self</span>,</span><br><span class="line">        value: &amp;<span class="keyword">mut</span> Value,</span><br><span class="line">        commit_ts: TimeStamp,</span><br><span class="line">        write_type: WriteType,</span><br><span class="line">    ) -&gt; codec::<span class="built_in">Result</span>&lt;()&gt; &#123;</span><br><span class="line">        <span class="comment">// append mvcc_ts_col_id</span></span><br><span class="line">        codec::number::NumberEncoder::write_u8(value, VAR_INT_FLAG)?;</span><br><span class="line">        codec::number::NumberEncoder::write_var_i64(value, EXTRA_MVCC_TS_COL_ID)?;</span><br><span class="line">        <span class="comment">// append mvcc_ts</span></span><br><span class="line">        codec::number::NumberEncoder::write_u8(value, VAR_UINT_FLAG)?;</span><br><span class="line">        codec::number::NumberEncoder::write_var_u64(value, commit_ts.physical())?;</span><br><span class="line">        <span class="comment">// append mvcc_op_col_id</span></span><br><span class="line">        codec::number::NumberEncoder::write_u8(value, VAR_INT_FLAG)?;</span><br><span class="line">        codec::number::NumberEncoder::write_var_i64(value, EXTRA_MVCC_OP_COL_ID)?;</span><br><span class="line">        <span class="comment">// append mvcc_op</span></span><br><span class="line">        codec::number::NumberEncoder::write_u8(value, COMPACT_BYTES_FLAG)?;</span><br><span class="line">        codec::byte::CompactByteEncoder::write_compact_bytes(</span><br><span class="line">            value,</span><br><span class="line">            &amp;write_type.to_string().as_bytes().to_vec(),</span><br><span class="line">        )?;</span><br><span class="line">        value.shrink_to_fit();</span><br><span class="line">        std::result::<span class="built_in">Result</span>::<span class="literal">Ok</span>(())</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>TiKV 侧所有修改见 <a href="https://github.com/Long-Live-the-DoDo/tikv/pull/1">https://github.com/Long-Live-the-DoDo/tikv/pull/1</a> 。</p>
+<h2 id="执行效果"><a href="#执行效果" class="headerlink" title="执行效果"></a>执行效果</h2><ul>
+<li>select</li>
+</ul>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/select.png" alt="select"></p>
+<ul>
+<li>update</li>
+</ul>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/update.png" alt="update"></p>
+<ul>
+<li>delete</li>
+</ul>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/delete.png" alt="delete"></p>
+<ul>
+<li>delete 后 update</li>
+</ul>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/update_after_delete.png" alt="update_after_delete"></p>
+<h2 id="还可以继续完善的点"><a href="#还可以继续完善的点" class="headerlink" title="还可以继续完善的点"></a>还可以继续完善的点</h2><ul>
+<li>将 <code>NeedMvcc</code> 存放在 <code>SessionContextVars</code> 中并不优雅，最好放入查询计划的相应结构中。</li>
+<li><code>delete from t where _tidb_mvcc_ts=xxx</code> 这样的语句存在二义性，后续可能会做成删除对应的 MVCC 记录。</li>
+<li>没有做 <code>_tidb_mvcc_ts</code> 与 <code>_tidb_mvcc_op</code> 相关的限制。例如，创建表时不允许以这两个名字命名、不允许修改这两列的值等。也可以做成，当修改这两列时直接进行 KV 更新操作（不过这种感觉没什么意义）。</li>
+<li>在 TiKV 中只实现了 MVCC 的 <code>ForwardScan</code> 没有实现 <code>BackwardScan</code>，这可能造成某些使用了 <code>BackwardScan</code> 的语句的不兼容。</li>
+<li>加入虚拟列的编码方式过于简单粗暴，可以考虑对其现阶段的 TiDB 适配所有编码方式。</li>
+<li>……</li>
+</ul>
+
+
+<div class="article-footer reveal fs14"><section id="license"><div class="header"><span>许可协议</span></div><div class="body"><p>本文采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">署名-非商业性使用-相同方式共享 4.0 国际</a> 许可协议，转载请注明出处。</p>
+</div></section></div>
+
+</article>
+
+<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/6-s081-notes/">6.S081 笔记<span class="note">较早</span></a><div class="line"></div><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
+
+
+
+
+
+
+  <div class='related-wrap md reveal' id="comments">
+    <div class='cmt-title cap theme'>
+      快来参与讨论吧
+    </div>
+    <div class='cmt-body beaudar'>
+      
+
+<svg class="loading" style="vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2709"><path d="M832 512c0-176-144-320-320-320V128c211.2 0 384 172.8 384 384h-64zM192 512c0 176 144 320 320 320v64C300.8 896 128 723.2 128 512h64z" p-id="2710"></path></svg>
+
+<div id="beaudar" repo="RinChanNOWWW/blog-comments" issue-term="pathname" theme="preferred-color-scheme" input-position="top" comment-order="desc" loading="false" branch="main"></div>
+
+    </div>
+  </div>
+
+
+
+      
+<footer class="page-footer reveal fs12"><hr><div class="text"><p>本博客所有文章除特别声明外，均采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> 许可协议，转载请注明出处。</p>
+<p>本站由 <a href="https://github.com/RinChanNOWWW/">@RinChanNOW</a> 创建，使用 <a href="https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0" title="v1.5.0">Stellar</a> 作为主题。</p>
+</div></footer>
+
+      <div class='float-panel mobile-only blur' style='display:none'>
+  <button type='button' class='sidebar-toggle mobile' onclick='sidebar.toggle()'>
+    <svg class="icon" style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="15301"><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 2.3 26.8 24.6 47.5 51.6 47.6h416.5v4z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15302"></path><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 1.9 27.7 23.9 49.7 51.6 51.6h416.5z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15303"></path></svg>
+  </button>
+</div>
+
+    </div>
+  </div>
+  <div class='scripts'>
+    <script type="text/javascript">
+  stellar = {
+    // 懒加载 css https://github.com/filamentgroup/loadCSS
+    loadCSS: (href, before, media, attributes) => {
+      var doc = window.document;
+      var ss = doc.createElement("link");
+      var ref;
+      if (before) {
+        ref = before;
+      } else {
+        var refs = (doc.body || doc.getElementsByTagName("head")[0]).childNodes;
+        ref = refs[refs.length - 1];
+      }
+      var sheets = doc.styleSheets;
+      if (attributes) {
+        for (var attributeName in attributes) {
+          if (attributes.hasOwnProperty(attributeName)) {
+            ss.setAttribute(attributeName, attributes[attributeName]);
+          }
+        }
+      }
+      ss.rel = "stylesheet";
+      ss.href = href;
+      ss.media = "only x";
+      function ready(cb) {
+        if (doc.body) {
+          return cb();
+        }
+        setTimeout(function () {
+          ready(cb);
+        });
+      }
+      ready(function () {
+        ref.parentNode.insertBefore(ss, before ? ref : ref.nextSibling);
+      });
+      var onloadcssdefined = function (cb) {
+        var resolvedHref = ss.href;
+        var i = sheets.length;
+        while (i--) {
+          if (sheets[i].href === resolvedHref) {
+            return cb();
+          }
+        }
+        setTimeout(function () {
+          onloadcssdefined(cb);
+        });
+      };
+      function loadCB() {
+        if (ss.addEventListener) {
+          ss.removeEventListener("load", loadCB);
+        }
+        ss.media = media || "all";
+      }
+      if (ss.addEventListener) {
+        ss.addEventListener("load", loadCB);
+      }
+      ss.onloadcssdefined = onloadcssdefined;
+      onloadcssdefined(loadCB);
+      return ss;
+    },
+
+    // 从 butterfly 和 volantis 获得灵感
+    loadScript: (src, opt) => new Promise((resolve, reject) => {
+      var script = document.createElement('script');
+      script.src = src;
+      if (opt) {
+        for (let key of Object.keys(opt)) {
+          script[key] = opt[key]
+        }
+      } else {
+        // 默认异步，如果需要同步，第二个参数传入 {} 即可
+        script.async = true
+      }
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    }),
+
+    // https://github.com/jerryc127/hexo-theme-butterfly
+    jQuery: (fn) => {
+      if (typeof jQuery === 'undefined') {
+        stellar.loadScript(stellar.plugins.jQuery).then(fn)
+      } else {
+        fn()
+      }
+    }
+  };
+  stellar.github = 'https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0';
+  stellar.config = {
+    date_suffix: {
+      just: '刚刚',
+      min: '分钟前',
+      hour: '小时前',
+      day: '天前',
+      month: '个月前',
+    },
+  };
+
+  // required plugins (only load if needs)
+  stellar.plugins = {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js',
+    sitesjs: '/js/plugins/sites.js',
+    friendsjs: '/js/plugins/friends.js',
+  };
+
+  // optional plugins
+  if ('true' == 'true') {
+    stellar.plugins.lazyload = Object.assign({"enable":true,"js":"https://cdn.jsdelivr.net/npm/vanilla-lazyload@17.3.1/dist/lazyload.min.js","transition":"blur"});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.swiper = Object.assign({"enable":true,"css":"https://unpkg.com/swiper/swiper-bundle.min.css","js":"https://unpkg.com/swiper/swiper-bundle.min.js"});
+  }
+  if ('' == 'true') {
+    stellar.plugins.scrollreveal = Object.assign({"enable":null,"js":"https://cdn.jsdelivr.net/npm/scrollreveal@4.0.9/dist/scrollreveal.min.js","distance":"8px","duration":500,"interval":100,"scale":1});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.preload = Object.assign({"enable":true,"service":"flying_pages","instant_page":"https://cdn.jsdelivr.net/gh/volantis-x/cdn-volantis@4.1.2/js/instant_page.js","flying_pages":"https://cdn.jsdelivr.net/gh/gijo-varghese/flying-pages@2.1.2/flying-pages.min.js"});
+  }
+</script>
+
+<!-- required -->
+
+  
+<script src="/js/main.js" async></script>
+
+
+
+<!-- optional -->
+
+  <script>
+  function loadBeaudar() {
+    const els = document.querySelectorAll("#comments #beaudar");
+    if (els.length === 0) return;
+    els.forEach((el, i) => {
+      try {
+        el.innerHTML = '';
+      } catch (error) {
+        console.log(error);
+      }
+      var script = document.createElement('script');
+      script.src = 'https://beaudar.lipk.org/client.js';
+      script.async = true;
+      for (let key of Object.keys(el.attributes)) {
+        let attr = el.attributes[key];
+        if (['class', 'id'].includes(attr.name) === false) {
+          script.setAttribute(attr.name, attr.value);
+        }
+      }
+      el.appendChild(script);
+    });
+  }
+  window.addEventListener('DOMContentLoaded', (event) => {
+      loadBeaudar();
+  });
+</script>
+
+
+
+
+<!-- inject -->
+
+
+  </div>
+</body>
+</html>

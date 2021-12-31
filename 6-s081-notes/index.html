@@ -65,7 +65,7 @@
 
 <div class="widgets">
 
-<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#LEC-1-Introduction"><span class="toc-text">LEC 1: Introduction</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#LEC-4-Page-Table"><span class="toc-text">LEC 4: Page Table</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#LEC-6-Isolation-amp-system-call-entry-exit"><span class="toc-text">LEC 6: Isolation &amp; system call entry&#x2F;exit</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#LEC-8-Page-faults"><span class="toc-text">LEC 8: Page faults</span></a></li></ol></div></div></div>
+<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#LEC-1-Introduction"><span class="toc-text">LEC 1: Introduction</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#LEC-4-Page-Table"><span class="toc-text">LEC 4: Page Table</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#LEC-6-Isolation-amp-system-call-entry-exit"><span class="toc-text">LEC 6: Isolation &amp; system call entry&#x2F;exit</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#LEC-8-Page-faults"><span class="toc-text">LEC 8: Page faults</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#LEC-11-Thread-switching"><span class="toc-text">LEC 11: Thread switching</span></a></li></ol></div></div></div>
 
 
 </div>
@@ -105,7 +105,10 @@
 <li><p>在 COW 的 Lab 中有一些小细节需要注意，这个地方害得我 cowtest 中的 file 一直遇到问题（见下面代码块）。还有一个小的注意点是，在 <code>copyonwrite</code> 中，内存页 copy 之后需要对原物理地址页调用一次 <code>kfree</code> 来减去引用计数（或者单独写一个函数来控制引用计数，我这里是融合到了其他函数中），不然会出现内存未被正确清除干净的问题。</p>
  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span></span></span><br><span class="line"><span class="function"><span class="title">copyout</span><span class="params">(<span class="keyword">pagetable_t</span> pagetable, uint64 dstva, <span class="keyword">char</span> *src, uint64 len)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  uint64 n, va0, pa0;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">while</span>(len &gt; <span class="number">0</span>)&#123;</span><br><span class="line">    va0 = PGROUNDDOWN(dstva);</span><br><span class="line">    pa0 = walkaddr(pagetable, va0);</span><br><span class="line">    <span class="keyword">if</span>(pa0 == <span class="number">0</span>)</span><br><span class="line">      <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 这里不能直接使用 PA2PTE(pa0),</span></span><br><span class="line">    <span class="comment">// 因为这样 pte 不带标志位，必须要重新 walk</span></span><br><span class="line">    <span class="keyword">pte_t</span>* pte = walk(pagetable, va0, <span class="number">0</span>); </span><br><span class="line">    <span class="keyword">if</span> (*pte &amp; PTE_COW) &#123;</span><br><span class="line">      <span class="keyword">if</span> (copyonwrite(pagetable, va0) != <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// 这里也必须重新 walk，因为 copyonwrite 中可能重新分配了地址</span></span><br><span class="line">      pa0 = walkaddr(pagetable, va0);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    n = PGSIZE - (dstva - va0);</span><br><span class="line">    <span class="keyword">if</span>(n &gt; len)</span><br><span class="line">      n = len;</span><br><span class="line">    memmove((<span class="keyword">void</span> *)(pa0 + (dstva - va0)), src, n);</span><br><span class="line"></span><br><span class="line">    len -= n;</span><br><span class="line">    src += n;</span><br><span class="line">    dstva = va0 + PGSIZE;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
 </ol>
-<p>​        </p>
+<h2 id="LEC-11-Thread-switching"><a href="#LEC-11-Thread-switching" class="headerlink" title="LEC 11: Thread switching"></a>LEC 11: Thread switching</h2><ol>
+<li>做 lab 的时候有一个问题稍微困扰了一下我。在 <code>thread_create</code> 的时候使用 <code>t-&gt;ra = (uint64) func</code> 将线程中要运行的函数的地址保存在了 <code>t-&gt;ra</code> 中，这样在 <code>thread_switch</code> 结束的时候我可以返回到正确的位置。我的疑惑在于要怎么保存线程运行到的地方呢，比如 <code>thread_a</code> 执行到某一个行的时候进行了 <code>yield</code> 让出了 CPU，那回到 <code>thread_a</code> 后要怎么回到 <code>yield</code> 的位置呢，因为 <code>pc</code> 并没有保存，<code>ra</code> 中存的又是 <code>func</code> 的初始位置，这岂不是每次都回 <code>thread_a</code> 的时候都要从 <code>func</code> 的一开始执行？这里其实是我想错了，因为 <code>ra</code> 并不是一成不变的，当执行 <code>yield</code> 等函数的时候，会在线程的栈中（也就是 <code>t-&gt;stack</code> 中）记录好各种信息，退出函数的时候会从 <code>t-&gt;stack</code> 中拿到返回地址等信息，返回地址会被打入 <code>ra</code> 中。所以以 <code>thread_a</code> 为例，在下一次 <code>thread_switch</code> 的时候，存到 <code>thread_a</code> 上下文信息中的 <code>ra</code> 已经不是最开始的 <code>func</code> 的地址了，而是执行 <code>thread_switch</code> 时的 <code>ra</code>。进程切换、线程切换就这里比较绕，必须以汇编的思维来思考每一个函数、每一个指令的执行逻辑，必要时可以以 gdb 为辅助一步一步观察来理解整个过程。</li>
+<li>lab 的 <code>Using threads</code> 部分有一个小点，就是用一个全局大锁锁住所有操作没法通过 <code>ph_fast</code> 测试，优化方法为给每一个 bucket 一个锁，分别锁自己的，这样才能通过 <code>ph_fast</code> 测试。</li>
+</ol>
 
 
 <div class="article-footer reveal fs14"><section id="license"><div class="header"><span>许可协议</span></div><div class="body"><p>本文采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">署名-非商业性使用-相同方式共享 4.0 国际</a> 许可协议，转载请注明出处。</p>
@@ -113,12 +116,26 @@
 
 </article>
 
-<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/tinysql-notes/">TinySQL 实现笔记<span class="note">较早</span></a><div class="line"></div><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
+<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/tinysql-notes/">TinySQL 实现笔记<span class="note">较早</span></a><div class="line"></div><a id="prev" href="/tidb-flash-mvcc-query/">TiDB Flashback 之 MVCC Query 的实现思路<span class="note">较新</span></a><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
 
 
 
 
 
+
+  <div class='related-wrap md reveal' id="comments">
+    <div class='cmt-title cap theme'>
+      快来参与讨论吧
+    </div>
+    <div class='cmt-body beaudar'>
+      
+
+<svg class="loading" style="vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2709"><path d="M832 512c0-176-144-320-320-320V128c211.2 0 384 172.8 384 384h-64zM192 512c0 176 144 320 320 320v64C300.8 896 128 723.2 128 512h64z" p-id="2710"></path></svg>
+
+<div id="beaudar" repo="RinChanNOWWW/blog-comments" issue-term="pathname" theme="preferred-color-scheme" input-position="top" comment-order="desc" loading="false" branch="main"></div>
+
+    </div>
+  </div>
 
 
 
@@ -269,6 +286,34 @@
 
 
 <!-- optional -->
+
+  <script>
+  function loadBeaudar() {
+    const els = document.querySelectorAll("#comments #beaudar");
+    if (els.length === 0) return;
+    els.forEach((el, i) => {
+      try {
+        el.innerHTML = '';
+      } catch (error) {
+        console.log(error);
+      }
+      var script = document.createElement('script');
+      script.src = 'https://beaudar.lipk.org/client.js';
+      script.async = true;
+      for (let key of Object.keys(el.attributes)) {
+        let attr = el.attributes[key];
+        if (['class', 'id'].includes(attr.name) === false) {
+          script.setAttribute(attr.name, attr.value);
+        }
+      }
+      el.appendChild(script);
+    });
+  }
+  window.addEventListener('DOMContentLoaded', (event) => {
+      loadBeaudar();
+  });
+</script>
+
 
 
 

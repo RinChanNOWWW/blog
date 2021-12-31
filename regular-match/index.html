@@ -70,7 +70,7 @@
 <div class="widgets">
 
 
-<div class="widget-wrap" id="recent"><div class="widget-header cap dis-select"><span class="name">最近更新</span></div><div class="widget-body fs14"><div class="line"></div><a class="more-item" href="/6-s081-notes/"><div class="cap"><time>2021-11-16</time><span>课程学习</span></div><span class="title">6.S081 笔记</span></a><div class="line"></div><a class="more-item" href="/tinysql-notes/"><div class="cap"><time>2021-09-29</time><span>编程开发</span></div><span class="title">TinySQL 实现笔记</span></a><div class="line"></div><a class="more-item" href="/tinykv-notes/"><div class="cap"><time>2021-09-12</time><span>编程开发</span></div><span class="title">TinyKV 实现笔记</span></a><div class="line"></div><a class="more-item" href="/ruborute-dev-log/"><div class="cap"><time>2021-08-29</time><span>编程开发</span></div><span class="title">ruborute 开发日志</span></a><div class="line"></div><a class="more-item" href="/cpp-type-traits/"><div class="cap"><time>2021-07-31</time><span>编程开发</span></div><span class="title">C++ 类型萃取</span></a></div></div>
+<div class="widget-wrap" id="recent"><div class="widget-header cap dis-select"><span class="name">最近更新</span></div><div class="widget-body fs14"><div class="line"></div><a class="more-item" href="/tidb-flash-mvcc-query/"><div class="cap"><time>2021-12-30</time><span>编程开发</span></div><span class="title">TiDB Flashback 之 MVCC Query 的实现思路</span></a><div class="line"></div><a class="more-item" href="/6-s081-notes/"><div class="cap"><time>2021-11-16</time><span>课程学习</span></div><span class="title">6.S081 笔记</span></a><div class="line"></div><a class="more-item" href="/tinysql-notes/"><div class="cap"><time>2021-09-29</time><span>编程开发</span></div><span class="title">TinySQL 实现笔记</span></a><div class="line"></div><a class="more-item" href="/tinykv-notes/"><div class="cap"><time>2021-09-12</time><span>编程开发</span></div><span class="title">TinyKV 实现笔记</span></a><div class="line"></div><a class="more-item" href="/ruborute-dev-log/"><div class="cap"><time>2021-08-29</time><span>编程开发</span></div><span class="title">ruborute 开发日志</span></a></div></div>
 
 
 
@@ -110,6 +110,20 @@
 
 
 
+
+  <div class='related-wrap md reveal' id="comments">
+    <div class='cmt-title cap theme'>
+      快来参与讨论吧
+    </div>
+    <div class='cmt-body beaudar'>
+      
+
+<svg class="loading" style="vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2709"><path d="M832 512c0-176-144-320-320-320V128c211.2 0 384 172.8 384 384h-64zM192 512c0 176 144 320 320 320v64C300.8 896 128 723.2 128 512h64z" p-id="2710"></path></svg>
+
+<div id="beaudar" repo="RinChanNOWWW/blog-comments" issue-term="pathname" theme="preferred-color-scheme" input-position="top" comment-order="desc" loading="false" branch="main"></div>
+
+    </div>
+  </div>
 
 
 
@@ -260,6 +274,34 @@
 
 
 <!-- optional -->
+
+  <script>
+  function loadBeaudar() {
+    const els = document.querySelectorAll("#comments #beaudar");
+    if (els.length === 0) return;
+    els.forEach((el, i) => {
+      try {
+        el.innerHTML = '';
+      } catch (error) {
+        console.log(error);
+      }
+      var script = document.createElement('script');
+      script.src = 'https://beaudar.lipk.org/client.js';
+      script.async = true;
+      for (let key of Object.keys(el.attributes)) {
+        let attr = el.attributes[key];
+        if (['class', 'id'].includes(attr.name) === false) {
+          script.setAttribute(attr.name, attr.value);
+        }
+      }
+      el.appendChild(script);
+    });
+  }
+  window.addEventListener('DOMContentLoaded', (event) => {
+      loadBeaudar();
+  });
+</script>
+
 
 
 

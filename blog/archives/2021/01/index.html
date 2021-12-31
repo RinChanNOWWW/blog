@@ -146,6 +146,9 @@
   	
   		
   		
+  	
+  		
+  		
   			
   		
   	
@@ -245,6 +248,19 @@
   		    
   				
   		    
+  				
+  		    
+  				<div>
+            <a class='post fs14' href="/tidb-flash-mvcc-query/">
+    					<time>12-30</time>
+    					<span>
+                
+      						TiDB Flashback 之 MVCC Query 的实现思路
+      					
+              </span>
+    				</a>
+          </div>
+  			
   				<div>
             <a class='post fs14' href="/6-s081-notes/">
     					<time>11-16</time>
@@ -349,6 +365,8 @@
   		<article class='post-card' id='archive'>
   			<div class='archive-year h4'>2020</div>
   			
+  				
+  		    
   				
   		    
   				
@@ -512,6 +530,8 @@
   		<article class='post-card' id='archive'>
   			<div class='archive-year h4'>2018</div>
   			
+  				
+  		    
   				
   		    
   				
@@ -767,6 +787,34 @@
 
 
 <!-- optional -->
+
+  <script>
+  function loadBeaudar() {
+    const els = document.querySelectorAll("#comments #beaudar");
+    if (els.length === 0) return;
+    els.forEach((el, i) => {
+      try {
+        el.innerHTML = '';
+      } catch (error) {
+        console.log(error);
+      }
+      var script = document.createElement('script');
+      script.src = 'https://beaudar.lipk.org/client.js';
+      script.async = true;
+      for (let key of Object.keys(el.attributes)) {
+        let attr = el.attributes[key];
+        if (['class', 'id'].includes(attr.name) === false) {
+          script.setAttribute(attr.name, attr.value);
+        }
+      }
+      el.appendChild(script);
+    });
+  }
+  window.addEventListener('DOMContentLoaded', (event) => {
+      loadBeaudar();
+  });
+</script>
+
 
 
 
