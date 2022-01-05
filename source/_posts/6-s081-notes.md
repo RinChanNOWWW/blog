@@ -73,3 +73,9 @@ categories:
 
 1. 做 lab 的时候有一个问题稍微困扰了一下我。在 `thread_create` 的时候使用 `t->ra = (uint64) func` 将线程中要运行的函数的地址保存在了 `t->ra` 中，这样在 `thread_switch` 结束的时候我可以返回到正确的位置。我的疑惑在于要怎么保存线程运行到的地方呢，比如 `thread_a` 执行到某一个行的时候进行了 `yield` 让出了 CPU，那回到 `thread_a` 后要怎么回到 `yield` 的位置呢，因为 `pc` 并没有保存，`ra` 中存的又是 `func` 的初始位置，这岂不是每次都回 `thread_a` 的时候都要从 `func` 的一开始执行？这里其实是我想错了，因为 `ra` 并不是一成不变的，当执行 `yield` 等函数的时候，会在线程的栈中（也就是 `t->stack` 中）记录好各种信息，退出函数的时候会从 `t->stack` 中拿到返回地址等信息，返回地址会被打入 `ra` 中。所以以 `thread_a` 为例，在下一次 `thread_switch` 的时候，存到 `thread_a` 上下文信息中的 `ra` 已经不是最开始的 `func` 的地址了，而是执行 `thread_switch` 时的 `ra`。进程切换、线程切换就这里比较绕，必须以汇编的思维来思考每一个函数、每一个指令的执行逻辑，必要时可以以 gdb 为辅助一步一步观察来理解整个过程。
 2. lab 的 `Using threads` 部分有一个小点，就是用一个全局大锁锁住所有操作没法通过 `ph_fast` 测试，优化方法为给每一个 bucket 一个锁，分别锁自己的，这样才能通过 `ph_fast` 测试。
+
+## LEC 16: File system performance and fast crash recovery
+
+1. ext3 的 logging system 与 xv6 的最大区别在于，xv6 的 transaction 是同步的，必须等头一个 transaction 的所有流程结束之后才能开始下一个；而 ext3 中，可以同时存在多个 transaction，但是下一个 transaction 也必须上一个 transaction 中的所有系统调用结束之后才能 open，在这之后两个 transaction 的不同状态可以共存（比如一个正在 commit，一个正在加入系统调用）。ext3 为 logging  提供了异步的解决方案，一个 transaction 中可以容纳更多的操作，提高并发度。
+2. 按照课中的说法，ext3 是每 5 秒开始一个新的 transaction。每一个系统调用会通过 `start` 获取一个 `handle`，然后在进行写操作时带上 `handle` 作为参数，这样可以让内核记录下这个 `handle`（代表本次系统调用） 属于哪个 transaction。
+3. transaction 的 commit 会有专门的内核线程来执行，也就是说是和其他操作是并发执行的（类似于 GC）。
