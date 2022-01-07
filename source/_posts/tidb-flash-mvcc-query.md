@@ -36,15 +36,23 @@ categories:
 - TiKV MVCC 读写流程：
     - [TiKV 源码解析系列文章（十三）MVCC 数据读取](https://pingcap.com/zh/blog/tikv-source-code-reading-13)
 
-## TiDB 侧实现
+## MVCC 信息查询功能
+
+### TiDB 侧实现
 
 TiDB 负责 SQL 语句的解析与查询计划的构建。所以 TiDB 侧的修改主要分为两个部分：第一个是查询计划构建引入虚拟列，第二个是提示 TiKV 需要读取所有版本的数据。下图是 TiDB 中需要修改的部分：
 
 ![mvcc_query_in_tidb](https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/mvcc_query_in_tidb.png)
 
-### 查询计划构建引入虚拟列
+#### 查询计划构建引入虚拟列
 
-以 `select _tidb_mvcc_ts from t` 为例，当 `PlanBuilder` 读取到 `t` 时，它会调用 [buildDataSource](https://github.com/Long-Live-the-DoDo/tidb/blob/3e4bc47d0d247ec81a09ed9eb6bb7c3e3137797c/planner/core/logical_plan_builder.go#L3953) 为查询计划构造逻辑上的数据源（也就是要查询的表），如果这里不做任何处理，当 TiDB 执行前进行各种元信息（比如查询的列是否存在等）时就会认为 `_tidb_mvcc_ts` 不是表 `t` 的列，从而执行失败，所以我们只需要在 `buildDataSource` 的时候加入虚拟列即可，让 TiDB 认为这个表就是有 `_tidb_mvcc_ts` 和 `_tidb_mvcc_op` 这两列的：
+以 
+
+```sql
+select _tidb_mvcc_ts from t;
+``` 
+
+为例，当 `PlanBuilder` 读取到 `t` 时，它会调用 [buildDataSource](https://github.com/Long-Live-the-DoDo/tidb/blob/3e4bc47d0d247ec81a09ed9eb6bb7c3e3137797c/planner/core/logical_plan_builder.go#L3953) 为查询计划构造逻辑上的数据源（也就是要查询的表），如果这里不做任何处理，当 TiDB 执行前进行各种元信息（比如查询的列是否存在等）时就会认为 `_tidb_mvcc_ts` 不是表 `t` 的列，从而执行失败，所以我们只需要在 `buildDataSource` 的时候加入虚拟列即可，让 TiDB 认为这个表就是有 `_tidb_mvcc_ts` 和 `_tidb_mvcc_op` 这两列的：
 
 ```go
 // planner/core/logical_plan_builder.go
@@ -79,7 +87,7 @@ func (b *PlanBuilder) buildDataSource(ctx context.Context, tn *ast.TableName, as
 
 其中与 MVCC 有关的数据结构与函数都是本次新加入的。
 
-### NeedMvcc 标志
+#### NeedMvcc 标志
 
 我在查询计划构建的过程中引入了 `NeedMvcc` 标志来标记本次查询是否需要 MVCC 信息。具体来说，是在遍历语法树生成查询计划时，如果遇到了 `_tidb_mvcc_ts` 或 `_tidb_mvcc_op`，则将这个标识即为 `true`。这里的实现比较简单粗暴，直接将 `NeedMvcc` 存到了 `SessionCtx` 中，也就是存到了整个 `Session` 的上下文中（所以用完之后需要清理为 `false`）。我觉得更优雅的方式是存放到 `LogicPlan` 与 `PhysicPlan` 中，然后层层传递到 `Executor`，但为了简单快捷的实现，我就直接放到了会话上下文中。
 
@@ -132,7 +140,7 @@ func BuildTableScanFromInfos(tableInfo *model.TableInfo, columnInfos []*model.Co
 ```
 接下来就可以交给 TiKV 来管了。对于 SQL 语句中的投影，选择等操作，无需修改，本身是兼容的。只要我们能够拿到想要的数据，构造好了想要的数据表 Schema，就可以实现剩余的功能。
 
-### 其他
+#### 其他
 
 由于在后续 TiKV 读取行数据写入 MVCC 信息的实现中（见下文），采用了原始的简单编码方式（colID1 typed_value1 colID2 typed_value...），所以需要统一 TiDB 和 TiKV 的存储数据编解码方式。为了简单起见，我直接抛弃了 TiDB 新引入的编码方式：
 
@@ -154,15 +162,15 @@ func EncodeRow(sc *stmtctx.StatementContext, row []types.Datum, colIDs []int64, 
 }
 ```
 
-TiDB 侧所有修改见 https://github.com/Long-Live-the-DoDo/tidb/pull/1 。
+具体修改见：https://github.com/Long-Live-the-DoDo/tidb/pull/1 。
 
-## TiKV 侧实现
+### TiKV 侧实现
 
 通过阅读 Coprocessor 的相关源码可以得知，整个 `select` 语句的执行过程可以大致拆分为：
 
 ![mvcc_query_in_tikv](https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/mvcc_query_in_tikv.png)
 
-### 构造 executor 及其中的 scanner
+#### 构造 executor 及其中的 scanner
 
 1. 首先通过通过 [build_executors](https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/components/tidb_query_executors/src/runner.rs#L153) 构造 `executor`。由于 `select` 语句对应的是 `ExecType::TypeTableScan`，所以相应的 `executor` 会通过 [BatchTableScanExecutor::new](https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/components/tidb_query_executors/src/table_scan_executor.rs#L36) 生成。而 `build_executors` 这里可以获取到 TiDB 发来的 RPC 请求，我们便可以从请求中提取出 `NeedMvcc` 字段传给 `BatchTableScanExecutor` 以便后续使用。
 2. 在 `BatchTableScanExecutor` 中，又会调用 [ScanExecutor::new](https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/components/tidb_query_executors/src/util/scan_executor.rs#L63) 生成一个 scanner wrapper。于是再将依次将 `NeedMvcc` 传递给 `ScanExecutor` 这个 wrapper。
@@ -173,7 +181,7 @@ TiDB 侧所有修改见 https://github.com/Long-Live-the-DoDo/tidb/pull/1 。
 
 我找到这条调用链其实是个逆序的过程，先找到最基本的 scanner，再向上溯源找到最基本的调用者。
 
-### scanner 迭代获取数据
+#### scanner 迭代获取数据
 
 1. 构造完 executor 后就可以开始执行了。对于 `select` 也就是 `TableScan` 来说，对于每一行数据的读取实际上就是不断调用 [ForwardScanner::read_next](https://github.com/Long-Live-the-DoDo/tikv/blob/27ebbf45b7918e3674b298afa835b027dafcd5cb/src/storage/mvcc/reader/scanner/forward.rs#L168) 这个方法（拿顺序遍历举例）。
 2. `read_next` 方法会按照 Key 遍历 `write` 列族拿到 write 的值，然后再通过 `handle_write` 方法执行迭代器读取数据的实际逻辑。所以说，我们最终的目的就是为 `Scanner::ForwardWithMvcc` 实现它的 `handle_write` 方法。
@@ -273,7 +281,225 @@ impl WithMvccInfoPolicy {
 }
 ```
 
-TiKV 侧所有修改见 https://github.com/Long-Live-the-DoDo/tikv/pull/1 。
+具体修改见：https://github.com/Long-Live-the-DoDo/tikv/pull/1 。
+
+## 基于 MVCC 信息的 RawUpdate 功能
+
+这个功能是一个附加的功能，比较好玩，实现上也非常的 hack。我们允许用户通过 SQL 语句来对某一个 Version 下的一条记录直接进行更改，也就是调用 TiKV 的 RawPut 接口，不进行事务相关的操作。
+
+具体来说，当用户输入这样一个 SQL：
+
+```sql
+update t set a = 2 where _tidb_mvcc_ts = xxxx;
+```
+
+时，不会进行正常的 TiKV 的 KV 读写流程，也就是不会增加一条 `Put` 记录，而是在原来的记录上进行更改。
+
+### TiDB 侧实现
+
+与 MVCC Query 类似，我们需要一个标识来表示这次是 RawUpdate，来让执行过程进入新的执行分支。这次是在构建 `Plan` 的时候往 `Plan` 里放一个标识字段：
+
+```go
+//  planner/core/logical_plan_builder.go
+
+func (b *PlanBuilder) buildUpdate(ctx context.Context, update *ast.UpdateStmt) (Plan, error) {
+    // ...
+    updt := Update{
+		OrderedList:               orderedList,
+		AllAssignmentsAreConstant: allAssignmentsAreConstant,
+		VirtualAssignmentsOffset:  len(update.List),
+		RawUpdate:                 b.ctx.GetSessionVars().NeedMvcc,
+	}.Init(b.ctx)
+    // ...
+    return updt, err
+}
+```
+这个参数会一直传递到物理计划的构建与执行中。然后就是具体的执行逻辑，这里的实现比较 hack。我是直接通过阅读 TiKV 源码后依葫芦画瓢在 TiDB 侧手动构造一个编码后的 Key 和 Value，然后通过 `tikv/client-go` 提供的 `RawPutWithCF` 接口直接进行写 KV 操作。使用 `RawPut` 不会进入 MVCC 事务流程，就相当于 KV 表的直接更新。
+
+首先从旧的 row 中获取 MVCC 信息用于后续组装 Raw Key 和 Value：
+
+```go
+// executor/update.go 
+
+func (e *UpdateExec) exec(ctx context.Context, schema *expression.Schema, row, newData []types.Datum) error {
+    // ...
+    commitTs := uint64(0)
+    op := byte('P')
+    if e.rawUpdate {
+        for j, col := range schema.Columns {
+            if col.ID == model.ExtraMVCCTsID {
+                commitTs = row[j].GetUint64()
+            } else if col.ID == model.ExtraMVCCOpID {
+                op = row[j].GetString()[0]
+            }
+        }
+    }
+    // Update row
+    changed, err1 := updateRecord(
+        ctx, 
+        e.ctx, 
+        handle, 
+        oldData, 
+        newTableData, 
+        flags, 
+        tbl, 
+        false, 
+        e.memTracker, 
+        e.rawUpdate, 
+        commitTs, 
+        op)
+    // ...
+}
+```
+
+然后利用 MVCC 信息构造 Raw 请求：
+
+```go
+// table/tables/tables.go
+
+// RawUpdateRecord is similar to UpdateRecord, but use RawPut.
+func (t *TableCommon) RawUpdateRecord(ctx context.Context, sctx sessionctx.Context, h kv.Handle, oldData, newData []types.Datum, touched []bool, commitTs uint64, op byte) error {
+    // ...
+    key := t.RecordKey(h)
+	encodedKey := codec.EncodeBytes([]byte{}, key)
+	// compose the writeCF key
+	commitTsBytes := make([]byte, 8)
+	if commitTs == 0 {
+		return nil
+	}
+	binary.BigEndian.PutUint64(commitTsBytes, ^commitTs)
+	encodedKey = append(encodedKey, commitTsBytes...)
+
+	sc, rd := sessVars.StmtCtx, &sessVars.RowEncoder
+	value, err := tablecodec.EncodeRow(sc, row, colIDs, nil, nil, rd)
+	if err != nil {
+		return err
+	}
+	// construct the writeCF value
+	// encoded value: OP _FLAG + START_TS + LONG_VALUE_SUFFIX + LONG_VALUE_LEN + VALUE
+	// encoded value: []byte{'P'(or 'D'), VarU64(0)..., 'V', U32(len(value)))..., value...}
+	encodedValue := make([]byte, 7)
+	encodedValue[0] = op
+	encodedValue[1] = 0
+	encodedValue[2] = 'V'
+	binary.BigEndian.PutUint32(encodedValue[3:7], uint32(len(value)))
+	encodedValue = append(encodedValue, value...)
+
+	// Raw input
+	addrs := []string{"127.0.0.1:2379"}
+	// get pd addr
+	if store, ok := sctx.GetStore().(interface{ EtcdAddrs() ([]string, error) }); ok {
+		if addrs, err = store.EtcdAddrs(); err != nil {
+			return err
+		}
+	}
+	cli, err := rawkv.NewClient(ctx, addrs, config.DefaultConfig().Security)
+	if err != nil {
+		return err
+	}
+	err = cli.PutWithCF(ctx, encodedKey, encodedValue, "write")
+	if err != nil {
+		return err
+	}
+    // ...
+}
+```
+
+这里还有一个比较 hack 的点是，我直接将一行的值存放到了 `write` 里（因为不太容易拿到 start_ts 没办法构造 `default` 的 Key，为了可以容纳更多的数据，我在 `write` 里多加了一个 long value（类似于以前的 short value），具体实现见 TiKV。
+
+具体修改见：https://github.com/Long-Live-the-DoDo/tidb/pull/3 。
+
+### TiKV 侧实现
+
+TiKV 这边主要是依照 short value 给 `write` 增加了一个 long value。
+
+```rust
+// components/txn_types/src/write.rs
+
+#[derive(PartialEq, Clone)]
+pub struct WriteRef<'a> {
+    pub write_type: WriteType,
+    pub start_ts: TimeStamp,
+    pub short_value: Option<&'a [u8]>,
+    pub long_value: Option<&'a [u8]>,
+    pub has_overlapped_rollback: bool,
+    pub gc_fence: Option<TimeStamp>,
+}
+
+impl WriteRef<'_> {
+    pub fn parse(mut b: &[u8]) -> Result<WriteRef<'_>> {
+        // ...
+        while !b.is_empty() {
+            match b
+                .read_u8()
+                .map_err(|_| Error::from(ErrorInner::BadFormatWrite))?
+            {
+                // ...
+                LONG_VALUE_PREFIX => {
+                    let len = b
+                        .read_u32()
+                        .map_err(|_| Error::from(ErrorInner::BadFormatWrite))?;
+                    if b.len() < len as usize {
+                        panic!(
+                            "content len [{}] shorter than short value len [{}]",
+                            b.len(),
+                            len,
+                        );
+                    }
+                    long_value = Some(&b[..len as usize]);
+                    b = &b[len as usize..];
+                }
+                // ...
+            }
+        }
+        Ok(WriteRef {
+            write_type,
+            start_ts,
+            short_value,
+            long_value,
+            has_overlapped_rollback,
+            gc_fence,
+        })
+    }
+}
+```
+
+然后在 `handle_write` 中添加相应的读取 long value 的逻辑即可。
+
+```rust
+fn handle_write(
+    &mut self,
+    current_user_key: Key,
+    commit_ts: TimeStamp,
+    cfg: &mut ScannerConfig<S>,
+    cursors: &mut Cursors<S>,
+    statistics: &mut Statistics,
+) -> Result<HandleRes<Self::Output>> {
+    let (value, write_type): (Option<Value>, WriteType) = loop {
+        // ...
+        match write_type {
+            WriteType::Put => {
+                if cfg.omit_value {
+                    break (Some(vec![]), write_type);
+                }
+                if let Some(value) = write.long_value {
+                    break (Some(value.to_vec()), write_type);
+                }
+                match write.short_value {
+                    // ...
+                }
+            }
+            WriteType::Delete => break (None, write_type),
+            WriteType::Lock | WriteType::Rollback => {
+                // Continue iterate next `write`.
+            }
+        }
+    }
+    // ...
+}
+```
+
+具体修改见：https://github.com/Long-Live-the-DoDo/tikv/pull/4 。
 
 ## 执行效果
 
@@ -293,6 +519,12 @@ TiKV 侧所有修改见 https://github.com/Long-Live-the-DoDo/tikv/pull/1 。
 
 ![update_after_delete](https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/update_after_delete.png)
 
+- raw update
+
+![rawupdate1](https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/rawupdate1.png)
+
+![rawupdate2](https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/tidb-flash-mvcc-query/rawupdate2.png)
+
 ## 还可以继续完善的点
 
 - 将 `NeedMvcc` 存放在 `SessionContextVars` 中并不优雅，最好放入查询计划的相应结构中。
@@ -300,4 +532,7 @@ TiKV 侧所有修改见 https://github.com/Long-Live-the-DoDo/tikv/pull/1 。
 - 没有做 `_tidb_mvcc_ts` 与 `_tidb_mvcc_op` 相关的限制。例如，创建表时不允许以这两个名字命名、不允许修改这两列的值等。也可以做成，当修改这两列时直接进行 KV 更新操作（不过这种感觉没什么意义）。
 - 在 TiKV 中只实现了 MVCC 的 `ForwardScan` 没有实现 `BackwardScan`，这可能造成某些使用了 `BackwardScan` 的语句的不兼容。
 - 加入虚拟列的编码方式过于简单粗暴，可以考虑对其现阶段的 TiDB 适配所有编码方式。
+- 只考虑了普通的 `TableScan` 操作，没有考虑 `IndexScan`。
+- 这些操作只针对于单表单条语句，并不适用于多表与事务操作。
+- RawUpdate 操作不支持事务。
 - ……
