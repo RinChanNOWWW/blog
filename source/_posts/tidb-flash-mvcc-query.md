@@ -536,3 +536,7 @@ fn handle_write(
 - 这些操作只针对于单表单条语句，并不适用于多表与事务操作。
 - RawUpdate 操作不支持事务。
 - ……
+
+## 后话
+
+在两位哥哥的带领下荣获三等奖。土豆哥的答辩片段：https://www.bilibili.com/video/BV1ZF411H73L
