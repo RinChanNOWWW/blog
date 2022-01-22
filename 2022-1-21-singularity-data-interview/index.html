@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+
+<head>
+  <meta name="generator" content="Hexo 5.4.0">
+  <meta charset="utf-8">
+  
+
+  <meta http-equiv='x-dns-prefetch-control' content='on' />
+  <link rel='dns-prefetch' href='https://cdn.jsdelivr.net'>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+  <meta name="renderer" content="webkit">
+  <meta name="force-rendering" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  <meta name="HandheldFriendly" content="True" >
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#f8f8f8">
+  <title>2022年1月21日 Singularity Data 存储引擎工程师（实习）面经 - リン屋</title>
+
+  
+    <meta name="description" content="2022年1月21日 Singularity Data 存储引擎工程师（实习）面经">
+<meta property="og:type" content="article">
+<meta property="og:title" content="2022年1月21日 Singularity Data 存储引擎工程师（实习）面经">
+<meta property="og:url" content="https://github.com/RinChanNOWWW/2022-1-21-singularity-data-interview/">
+<meta property="og:site_name" content="リン屋">
+<meta property="og:description" content="2022年1月21日 Singularity Data 存储引擎工程师（实习）面经">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-01-22T02:37:10.000Z">
+<meta property="article:modified_time" content="2022-01-22T02:37:10.000Z">
+<meta property="article:author" content="RinChanNOW">
+<meta property="article:tag" content="存储">
+<meta property="article:tag" content="Singularity Data">
+<meta name="twitter:card" content="summary">
+  
+  
+
+  <!-- feed -->
+  
+
+  
+    
+<link rel="stylesheet" href="/css/main.css">
+
+  
+
+  
+
+  
+</head>
+
+<body>
+  
+
+
+  <div class='l_body' id='start'>
+    <aside class='l_left' layout='post'>
+    
+
+
+<header class="header">
+
+<div class="logo-wrap"><a class="avatar" href="/about/"><div class="bg" style="opacity:0;background-image:url(https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.2/avatar/round/rainbow64@3x.webp);"></div><img no-lazy class="avatar" src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/profile/avatar.jpg" onerror="javascript:this.classList.add('error');this.src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/image/2659360.svg';"></a><a class="title" href="/"><div class="main">リン屋</div><div class="sub cap">RinChanNOW's blog</div></a></div>
+<nav class="menu dis-select"><a class="nav-item active" href="/">博客</a><a class="nav-item" href="/about/">关于</a></nav></header>
+
+<div class="widgets">
+
+<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%8F%90%E5%89%8D%E6%80%BB%E7%BB%93"><span class="toc-text">提前总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E9%9D%A2"><span class="toc-text">一面</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%A1%B9%E7%9B%AE%E4%BB%8B%E7%BB%8D"><span class="toc-text">项目介绍</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AE%97%E6%B3%95%E9%A2%98"><span class="toc-text">算法题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%86%E5%B8%83%E5%BC%8F%E5%93%88%E5%B8%8C%E8%A1%A8%E7%9A%84%E8%AE%BE%E8%AE%A1"><span class="toc-text">分布式哈希表的设计</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E9%97%AE"><span class="toc-text">提问</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E9%9D%A2"><span class="toc-text">二面</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%87%AA%E6%88%91%E4%BB%8B%E7%BB%8D"><span class="toc-text">自我介绍</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E4%B9%A0%E7%BB%8F%E5%8E%86%E4%BB%8B%E7%BB%8D"><span class="toc-text">实习经历介绍</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%A1%B9%E7%9B%AE%E4%BB%8B%E7%BB%8D-1"><span class="toc-text">项目介绍</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#LSM-Tree-%E7%9B%B8%E5%85%B3"><span class="toc-text">LSM-Tree 相关</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AE%97%E6%B3%95%E9%A2%98-1"><span class="toc-text">算法题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9C%80%E5%90%8E"><span class="toc-text">最后</span></a></li></ol></li></ol></div></div></div>
+
+
+</div>
+
+
+    </aside>
+    <div class='l_main'>
+      
+
+      
+
+
+<div class="bread-nav fs12"><div id="breadcrumb"><a class="cap breadcrumb" href="/">主页</a><span class="sep"></span><a class="cap breadcrumb" href="/">文章</a><span class="sep"></span><a class="cap breadcrumb-link" href="/blog/categories/%E9%9D%A2%E7%BB%8F/">面经</a></div><div id="post-meta">发布于&nbsp;<time datetime="2022-01-22T02:37:10.000Z">2022-01-22</time></div></div>
+
+<article class='content md post'>
+<h1 class="article-title"><span>2022年1月21日 Singularity Data 存储引擎工程师（实习）面经</span></h1>
+<p>2022年1月21日 Singularity Data 存储引擎工程师（实习）面经</p>
+<span id="more"></span>
+
+<h2 id="提前总结"><a href="#提前总结" class="headerlink" title="提前总结"></a>提前总结</h2><p>由于是第一次面试这种基础软件的岗位，一开始有点小紧张，面对面试官的问题想尽快一股脑把想说的说出来，自己的思维及其跳跃，面试官问这个我直接延伸到另一个地方去了，导致在语言的组织上变得十分混乱，把面试官都给整蒙了，后面才渐渐稳定下来。</p>
+<p>两次面试的面试官都很好，整个面试过程更像是一次技术交流，这也是我后面渐渐放开的原因。</p>
+<p>简历上的一个败笔是带上了 MiniOB 这个项目。在面试中问到这个项目的时候，我才意识到，这个项目值得说的东西太少了，这整个项目也是个玩具级的软件，和真实的工业产品的设计理念大相径庭。在介绍项目的时候我就觉得很尴尬，面试过程中甚至产生了抵触情绪，我觉得面试官肯定也被我整尬了。</p>
+<h2 id="一面"><a href="#一面" class="headerlink" title="一面"></a>一面</h2><h3 id="项目介绍"><a href="#项目介绍" class="headerlink" title="项目介绍"></a>项目介绍</h3><p>首先就是 MiniOB。一开始大概介绍了整个项目的背景和整体的功能分布，然后由于我一开始的迷惑操作，导致在面试时直接开始了现场优化当时实现的功能。</p>
+<ul>
+<li>首先是优化 NULL 类型的实现，我引入了一个叫 NULLMAP 的 BITMAP 来表示每一个记录中某一个字段是否是 NULL。这里由于我的思维有点跳跃导致面试官一开始没 get 到我的意思，便扯了一会儿皮。</li>
+<li>然后介绍了下 TEXT 类型的实现，这里也由于我的思维混乱，被面试官指出了几个我实际上是实现了的但是没有说出来的要点。</li>
+<li>最后又问了下我多表查询的实现。虽然当时这一部分是我实现的，但是我确实有点忘了。几经想打开源码复习一波，但是被面试官制止了。看了代码才想起来，是先把两张表查出来再做笛卡尔积，这里实现的大头是怎么实现笛卡尔积，但我面试时的时候直接忘了。</li>
+</ul>
+<p>然后就是 TiDB Hackthon 的项目 MVCC 时光机。得益于头一天 TiDB Hackthon 获奖选手的采访，我对这个项目不管是我自己的部分还是其他人做的部分都比较熟悉，所以这一部分倒是信手拈来。我就一五一十地告诉面试官我负责的 MVCC Query 是如何实现地。</p>
+<h3 id="算法题"><a href="#算法题" class="headerlink" title="算法题"></a>算法题</h3><p><a target="_blank" rel="noopener" href="https://leetcode-cn.com/problems/kth-smallest-element-in-a-bst">Leetcode 230.二叉搜索树中第K小的元素</a>，一开始没看到二叉搜索树所以想用搜索+最小堆来做。后来发现这不是二叉搜索树嘛，那直接中序遍历到第 k 个节点不就行了。比较简单，没什么好说的。</p>
+<h3 id="分布式哈希表的设计"><a href="#分布式哈希表的设计" class="headerlink" title="分布式哈希表的设计"></a>分布式哈希表的设计</h3><p>这里面试官想要的设计是，客户端直接请求到存储节点，而不是通过一个统一的 master 来请求。我 get 到面试官的意思后就想到的是一致性哈希，但是为了不让面试官认为我是个背题家，就没有提到一致性哈希。后来一想，面试官可能就是想听到一致性哈希，这么一来我还挺蠢的。</p>
+<p>一些设计：</p>
+<ul>
+<li>client 首先从 master 获取到所有存储节点的分布等元信息，并维持在 client 的 cache 中。</li>
+<li>client 中缓存了各个节点的地址信息与哈希算法。</li>
+<li>当请求某个节点失败时向 master 请求更新节点信息。如果使用一致性哈希算法怎么不需要这么做。</li>
+</ul>
+<h3 id="提问"><a href="#提问" class="headerlink" title="提问"></a>提问</h3><p>问了一些流式数据库的设计与实现，它们与传统数据库的区别。</p>
+<h2 id="二面"><a href="#二面" class="headerlink" title="二面"></a>二面</h2><h3 id="自我介绍"><a href="#自我介绍" class="headerlink" title="自我介绍"></a>自我介绍</h3><p>二面一开始进行了一些自我介绍，我的学历，专业，并介绍了在分布式与数据库领域中我的一些学习和工作。</p>
+<h3 id="实习经历介绍"><a href="#实习经历介绍" class="headerlink" title="实习经历介绍"></a>实习经历介绍</h3><p>一开始介绍了在字节的实习经历。面试官问了云游戏平台的一些具体实现。</p>
+<p>然后介绍了在腾讯实习的工作。QQ 频道消息通知的开发经历，以及 QQ 频道机器人的一些实现，最后是 QQ 频道机器人平台的介绍。</p>
+<p>面试官也和我交流了他认为应该怎么设计这些系统。</p>
+<h3 id="项目介绍-1"><a href="#项目介绍-1" class="headerlink" title="项目介绍"></a>项目介绍</h3><p>又将 MiniOB 与 MVCC 时光机介绍了一遍。不过这次 MVCC 时光机讲的更多，把 FLASHBACK 和 GC 相关的功能也讲了。</p>
+<h3 id="LSM-Tree-相关"><a href="#LSM-Tree-相关" class="headerlink" title="LSM-Tree 相关"></a>LSM-Tree 相关</h3><p>感觉应该是从 TiKV 延伸到 RocksDB 再延伸过来的，主要问了这些问题：</p>
+<ul>
+<li>LSM-Tree 的整体结构，以及各个部分的结构。</li>
+<li>LSM-Tree 操作的 workflow。</li>
+<li>LSM-Tree 的一个 SST 中是否会有重复的 key。不同的 SST 中会有吗。对于前者，显然是不会；对于后者，面试官说得看具体实现，不含重复 key 的实现是有的。</li>
+<li>存储系统宕机之后怎么办。</li>
+</ul>
+<h3 id="算法题-1"><a href="#算法题-1" class="headerlink" title="算法题"></a>算法题</h3><p>给两个等长的 01 数组，找出它们拥有相同 01 个数的最大公共下标区间的长度。比如 101 与 010，它们的相同 01 个数的最大公共下标区间为 [0, 1]，长度为 2（10 与 01）。要求时间复杂度为 O(n)。</p>
+<p>利用前缀和可以轻松找到 O(n^2) 的算法。但是要求 O(n)，所以需要继续优化。</p>
+<p>经面试官的提示，得出以下算法（以 A = [0,0,1,1] 与 B = [1,1,0,1] 为例）：</p>
+<ul>
+<li>C = A - B = [-1,-1,1,0]。问题转换为 C 的最长的和为 0 的子数组。</li>
+<li>求得 C 数组的前缀和数组 p = [-1,-2,-1,-1]，向 p 最前面增加一个 0 得到 P = [0,-1,-2,-1,-1]。问题转换为在 P 中找到两个下标 i, j (i &lt;= j) 使得 P[i] == P[j]，怎么答案 ans = max(j - i + 1)（此例子中为 3）。一些细节：<ul>
+<li>正确性：前缀和数组两个元素相同代表它们之间的所有元素的和为 0。</li>
+<li>为什么要填一个 0：处理前缀和数组中有元素为 0 的情况。</li>
+<li>具体实现可以依靠哈希表，前缀和数组也不用真正的创建，迭代一个变量即可。</li>
+</ul>
+</li>
+</ul>
+<p>Python 实现：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">func</span>(<span class="params">A: <span class="type">List</span>[<span class="built_in">int</span>], B: <span class="type">List</span>[<span class="built_in">int</span>]</span>) -&gt; <span class="built_in">int</span>:</span></span><br><span class="line">    C = [A[i] - B[i] <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(A))]</span><br><span class="line">    presum = <span class="number">0</span></span><br><span class="line">    hashmap = &#123;<span class="number">0</span>: -<span class="number">1</span>&#125;</span><br><span class="line">    ans = <span class="number">0</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(C)):</span><br><span class="line">        presum += C[i]</span><br><span class="line">        <span class="keyword">if</span> presum <span class="keyword">not</span> <span class="keyword">in</span> hashmap:</span><br><span class="line">            hashmap[presum] = i</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            ans = <span class="built_in">max</span>(ans, i - hashmap[presum] + <span class="number">1</span>)</span><br><span class="line">    <span class="keyword">return</span> ans</span><br></pre></td></tr></table></figure>
+
+<h3 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h3><p>面试官问我想做存储还是计算，我说存储。然后他又问了下可以做计算吗，了解过计算吗？看来是想让我做计算相关的。我说了解的不多，他说没关系。</p>
+<p>最后问我会不会 Rust，答曰”会“。</p>
+<p>结束。</p>
+
+
+<div class="article-footer reveal fs14"><section id="license"><div class="header"><span>许可协议</span></div><div class="body"><p>本文采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">署名-非商业性使用-相同方式共享 4.0 国际</a> 许可协议，转载请注明出处。</p>
+</div></section></div>
+
+</article>
+
+<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/tidb-flash-mvcc-query/">TiDB Flashback 之 MVCC Query 的实现思路<span class="note">较早</span></a><div class="line"></div><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
+
+
+
+
+
+
+  <div class='related-wrap md reveal' id="comments">
+    <div class='cmt-title cap theme'>
+      快来参与讨论吧
+    </div>
+    <div class='cmt-body beaudar'>
+      
+
+<svg class="loading" style="vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2709"><path d="M832 512c0-176-144-320-320-320V128c211.2 0 384 172.8 384 384h-64zM192 512c0 176 144 320 320 320v64C300.8 896 128 723.2 128 512h64z" p-id="2710"></path></svg>
+
+<div id="beaudar" repo="RinChanNOWWW/blog-comments" issue-term="pathname" theme="preferred-color-scheme" input-position="top" comment-order="desc" loading="false" branch="main"></div>
+
+    </div>
+  </div>
+
+
+
+      
+<footer class="page-footer reveal fs12"><hr><div class="text"><p>本博客所有文章除特别声明外，均采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> 许可协议，转载请注明出处。</p>
+<p>本站由 <a href="https://github.com/RinChanNOWWW/">@RinChanNOW</a> 创建，使用 <a href="https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0" title="v1.5.0">Stellar</a> 作为主题。</p>
+</div></footer>
+
+      <div class='float-panel mobile-only blur' style='display:none'>
+  <button type='button' class='sidebar-toggle mobile' onclick='sidebar.toggle()'>
+    <svg class="icon" style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="15301"><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 2.3 26.8 24.6 47.5 51.6 47.6h416.5v4z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15302"></path><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 1.9 27.7 23.9 49.7 51.6 51.6h416.5z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15303"></path></svg>
+  </button>
+</div>
+
+    </div>
+  </div>
+  <div class='scripts'>
+    <script type="text/javascript">
+  stellar = {
+    // 懒加载 css https://github.com/filamentgroup/loadCSS
+    loadCSS: (href, before, media, attributes) => {
+      var doc = window.document;
+      var ss = doc.createElement("link");
+      var ref;
+      if (before) {
+        ref = before;
+      } else {
+        var refs = (doc.body || doc.getElementsByTagName("head")[0]).childNodes;
+        ref = refs[refs.length - 1];
+      }
+      var sheets = doc.styleSheets;
+      if (attributes) {
+        for (var attributeName in attributes) {
+          if (attributes.hasOwnProperty(attributeName)) {
+            ss.setAttribute(attributeName, attributes[attributeName]);
+          }
+        }
+      }
+      ss.rel = "stylesheet";
+      ss.href = href;
+      ss.media = "only x";
+      function ready(cb) {
+        if (doc.body) {
+          return cb();
+        }
+        setTimeout(function () {
+          ready(cb);
+        });
+      }
+      ready(function () {
+        ref.parentNode.insertBefore(ss, before ? ref : ref.nextSibling);
+      });
+      var onloadcssdefined = function (cb) {
+        var resolvedHref = ss.href;
+        var i = sheets.length;
+        while (i--) {
+          if (sheets[i].href === resolvedHref) {
+            return cb();
+          }
+        }
+        setTimeout(function () {
+          onloadcssdefined(cb);
+        });
+      };
+      function loadCB() {
+        if (ss.addEventListener) {
+          ss.removeEventListener("load", loadCB);
+        }
+        ss.media = media || "all";
+      }
+      if (ss.addEventListener) {
+        ss.addEventListener("load", loadCB);
+      }
+      ss.onloadcssdefined = onloadcssdefined;
+      onloadcssdefined(loadCB);
+      return ss;
+    },
+
+    // 从 butterfly 和 volantis 获得灵感
+    loadScript: (src, opt) => new Promise((resolve, reject) => {
+      var script = document.createElement('script');
+      script.src = src;
+      if (opt) {
+        for (let key of Object.keys(opt)) {
+          script[key] = opt[key]
+        }
+      } else {
+        // 默认异步，如果需要同步，第二个参数传入 {} 即可
+        script.async = true
+      }
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    }),
+
+    // https://github.com/jerryc127/hexo-theme-butterfly
+    jQuery: (fn) => {
+      if (typeof jQuery === 'undefined') {
+        stellar.loadScript(stellar.plugins.jQuery).then(fn)
+      } else {
+        fn()
+      }
+    }
+  };
+  stellar.github = 'https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0';
+  stellar.config = {
+    date_suffix: {
+      just: '刚刚',
+      min: '分钟前',
+      hour: '小时前',
+      day: '天前',
+      month: '个月前',
+    },
+  };
+
+  // required plugins (only load if needs)
+  stellar.plugins = {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js',
+    sitesjs: '/js/plugins/sites.js',
+    friendsjs: '/js/plugins/friends.js',
+  };
+
+  // optional plugins
+  if ('true' == 'true') {
+    stellar.plugins.lazyload = Object.assign({"enable":true,"js":"https://cdn.jsdelivr.net/npm/vanilla-lazyload@17.3.1/dist/lazyload.min.js","transition":"blur"});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.swiper = Object.assign({"enable":true,"css":"https://unpkg.com/swiper/swiper-bundle.min.css","js":"https://unpkg.com/swiper/swiper-bundle.min.js"});
+  }
+  if ('' == 'true') {
+    stellar.plugins.scrollreveal = Object.assign({"enable":null,"js":"https://cdn.jsdelivr.net/npm/scrollreveal@4.0.9/dist/scrollreveal.min.js","distance":"8px","duration":500,"interval":100,"scale":1});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.preload = Object.assign({"enable":true,"service":"flying_pages","instant_page":"https://cdn.jsdelivr.net/gh/volantis-x/cdn-volantis@4.1.2/js/instant_page.js","flying_pages":"https://cdn.jsdelivr.net/gh/gijo-varghese/flying-pages@2.1.2/flying-pages.min.js"});
+  }
+</script>
+
+<!-- required -->
+
+  
+<script src="/js/main.js" async></script>
+
+
+
+<!-- optional -->
+
+  <script>
+  function loadBeaudar() {
+    const els = document.querySelectorAll("#comments #beaudar");
+    if (els.length === 0) return;
+    els.forEach((el, i) => {
+      try {
+        el.innerHTML = '';
+      } catch (error) {
+        console.log(error);
+      }
+      var script = document.createElement('script');
+      script.src = 'https://beaudar.lipk.org/client.js';
+      script.async = true;
+      for (let key of Object.keys(el.attributes)) {
+        let attr = el.attributes[key];
+        if (['class', 'id'].includes(attr.name) === false) {
+          script.setAttribute(attr.name, attr.value);
+        }
+      }
+      el.appendChild(script);
+    });
+  }
+  window.addEventListener('DOMContentLoaded', (event) => {
+      loadBeaudar();
+  });
+</script>
+
+
+
+
+<!-- inject -->
+
+
+  </div>
+</body>
+</html>
