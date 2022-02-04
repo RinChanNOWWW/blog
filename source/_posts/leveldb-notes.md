@@ -117,12 +117,12 @@ Status DB::Open(const Options& options, const std::string& dbname, DB** dbptr) {
     // ...
     Status s = impl->Recover(&edit, &save_manifest);
     if (s.ok() && impl->mem_ == nullptr) {
-        s = NewLogFile(); // presudo code
+        s = NewLogFile(); // pseudo code
         if (s.ok()) {
             edit.SetLogNumber(new_log_number);
             impl->logfile_ = lfile;
             impl->logfile_number_ = new_log_number;
-            impl_mem_ = NewMemTable(); // presudo code
+            impl_mem_ = NewMemTable(); // pseudo code
         }
     }
     // ...
@@ -157,7 +157,7 @@ Status DBImpl::RecoverLogFile(uint64_t log_number, bool last_log,
     while (reader.ReadRecord(&record, &scratch) && status.ok()) {
         // ...
         if (mem == nullptr) {
-            mem = NewMemTable(); // presudo code
+            mem = NewMemTable(); // pseudo code
         }
         status = InsertInto(&batch, mem);
         // ...
@@ -176,7 +176,7 @@ Status DBImpl::RecoverLogFile(uint64_t log_number, bool last_log,
                 mem_ = mem;
                 mem = nullptr;
             } else {
-                mem_ = NewMemTable(); // presudo code
+                mem_ = NewMemTable(); // pseudo code
             }
             // ...
         }
@@ -250,7 +250,7 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* updates) {
         //...
         {
             mutex_.Unlock();
-            WriteLogAndMemTable(); // presudo code
+            WriteLogAndMemTable(); // pseudo code
             mutex_.Lock();
         }
         // ...
