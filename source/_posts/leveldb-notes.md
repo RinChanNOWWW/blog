@@ -222,7 +222,7 @@ if (status.ok() && options.sync) {
 
 我也不知道进入这个失败模式后会不会通过一些措施恢复，针对 `bg_error_` 搜索了一番发现并没有恢复的逻辑，可能进入这个模式之后就只能靠应用层重启 DB 了吧。
 
-## DBImpl::Write 使怎么使用 writers 队列的
+## DBImpl::Write 是怎么使用 writers 队列的
 
 一开始这个 writers 队列，还有 writer 的 condition variable 还有最后的 while 循环 pop writers 队列的一系列操作看的我很懵逼，心想这到底有什么意义，看起来和加一把大锁串行执行没什么区别。理解这一段代码着重需要理解这两个东西：
 
@@ -344,7 +344,24 @@ void PosixEnv::BackgroundThreadMain() {
 }
 ```
 
-这里 `background_work_cv_` 条件变量中的的 mutex 就是 `background_work_mutex_`，就像上一节「[DBImpl::Write 使怎么使用 writers 队列的](#DBImpl-Write-使怎么使用-writers-队列的)」中所说，从 wait 中苏醒后会立刻给 mutex 重新调用 lock，所以这里如果 `background_thread` 在 `Schedule` 的途中被唤醒，它并不会直接继续向下执行，而是会等待任务被推入队列然后释放锁之后才会进入后面的逻辑。
+这里 `background_work_cv_` 条件变量中的的 mutex 就是 `background_work_mutex_`，就像上一节「[DBImpl::Write 是怎么使用 writers 队列的](#DBImpl-Write-使怎么使用-writers-队列的)」中所说，从 wait 中苏醒后会立刻给 mutex 重新调用 lock，所以这里如果 `background_thread` 在 `Schedule` 的途中被唤醒，它并不会直接继续向下执行，而是会等待任务被推入队列然后释放锁之后才会进入后面的逻辑。
 
 compaction 的调用链为 `DBImpl::BGWork` -> `DBImpl::BackgroundCall` -> `DBImpl::BackgroundCompaction`。
 
+## Compaction 的整个流程是怎样的
+
+### Minor Compaction
+
+首先，在启动后台 compaction 线程后，如果发现存在 immutable `MemTable`，会立刻调用 `DBImpl::WriteLevel0Table` 将其 compact 到 Levels 中。这里有一点需要注意的是，新的 mutable `MemTable` 与 log 文件已经在将 mutable 变为 immutable 的时候进行了，所以在 `DBImpl::WriteLevel0Table` 成功之后可以直接设置新的 log number 并进行 `VersionSet::LogAndApply` 持久化最新的 DB meta 信息，并 `DBImpl::RemoveObsoleteFiles` 删除旧文件。
+
+这里来仔细看一下 `DBImpl::WriteLevel0Table`，虽然名字是写 Level-0 的 SST，但是实际上不一定，它通过 `Version::PickLevelForMemTableOutput` 来确定新写的 SST 应该属于哪一层。这里借用博主 [beihai](https://github.com/beihai0xff) 博客中的一张图来表示应该选用哪一层（最多到 Level-2）：
+
+![PickLevelForMemTableOutput](https://wingsxdu.com/posts/database/leveldb/Pick-Level-For-MemTable-Output@2x.png)
+
+图中最下面的阈值是指，重叠的文件总大小大于 10 倍的 `max_file_size`（默认是 2MB）。
+
+这里值得注意的一点是，代码逻辑中，是先写好 SST（落盘），再为它选择 Level。进行完 minor compaction 之后，本次 compaction 任务就结束了，不会再继续进行 major compaction。下一次 compaction 得等到下一次 `DBImpl::MaybeScheduleCompaction` 的触发。
+
+### Major Compaction
+
+TODO
