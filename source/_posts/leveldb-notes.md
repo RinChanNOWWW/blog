@@ -12,6 +12,8 @@ categories:
 
 记录一下学习 LevelDB 遇到的一些问题。
 
+最后更新：2022-02-09。
+
 <!-- more -->
 
 ## 为什么每次重新打开 LevelDB 都会生成新的文件
@@ -216,7 +218,7 @@ if (status.ok() && options.sync) {
 
 我的疑惑是 `AddRecord` 的实现中已经调用了 `write` 将内容写到了对应的文件描述符对应的文件，为什么还需要 `Sync`？这里其实是因为现代操作系统一般执行写入的时候都只是先把内容写到缓存中，极其一定大小的数据块后才统一 flush 到磁盘中，这样加快了写操作的速度。而调用 `Sync` 就相当于强制刷盘，进行一个同步的等待。拿实现了 POSIX 接口的环境来说（执行逻辑进入 *util/env_posix.cc*），最终会调用 `fcntl(fd, F_FULLFSYNC)` 或 `fdatasync(fd)` 或 `fsyn(fd)` ，这取决于当前系统的支持，其目的都是进行一个强制落盘的同步操作。所以说开启了 `sync` 这个选项可能使写操作变慢。如果 `Sync` 失败，则会记录一个 `bg_error_`（background error），使得之后所有的写操作都失败，源码中的注释写的是：
 
->>> The state of the log file is indeterminate: the log record we just added may or may not show up when the DB is re-opened. So we force the DB into a mode where all future writes fail.
+> The state of the log file is indeterminate: the log record we just added may or may not show up when the DB is re-opened. So we force the DB into a mode where all future writes fail.
 
 我也不知道进入这个失败模式后会不会通过一些措施恢复，针对 `bg_error_` 搜索了一番发现并没有恢复的逻辑，可能进入这个模式之后就只能靠应用层重启 DB 了吧。
 
@@ -277,3 +279,72 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* updates) {
 首先 `MutexLock l(&mutex_);` 这段代码会先锁定 `mutex_`（类似 `scoped_lock`），最开始由于锁的存在只会进入一个 writer，并且不会进行 wait。当这个 writer 构建 `WriteBatch` 完毕之后便可释放 lock（因为每一个 `WriteBatch` 的落盘是互不影响的，它们之前没有需要共享的数据，`MemTable` 也有自己的锁）。在 lock 释放后并执行写入的这段时间，其他等待的 writer 便可以进入之后的被 push 进 writers 队列并进入睡眠状态。前一个 `WriteBatch` 的写入时间越长便越能积累更多的 writer。当前一个 `WriteBatch` 执行完毕后，就会查看 writer 队列，并唤醒一个 writer。下一个 writer 便可以同时将当前队列中的所有 writer 构建为一个 `WriteBatch`，并将 `last_writer` 更新为最后一个 writer。之后的 while 循环便是将已经被统一操作的 writer pop 出队列，并结束它们 block 住的线程。
 
 `DBImpl::Write` 的设计让我在数据库写操作的设计与 C++ 多线程编程上学到很多（~~太棒了，学到昏厥~~）。代码逻辑清晰，可读性强，注释完备，连我那么菜的人都能轻松读懂，LevelDB 的代码质量可见一斑。
+
+## 何时触发后台 Compaction
+
+直接查看 `DBImpl::MaybeScheduleCompaction` 这个方法的调用地点：
+
+- `DB::Open` 完成之后会立刻进行一次。
+- 在 `Get` 操作中，如果查找进入到了 SST 文件中，并将此文件的 `allowed_seek` 数量耗尽，并且没有其他正在 compact 的文件，便会将此文件设置为即将 compact 的文件并尝试启动后台 compaction 线程。
+- 通过 `DBIter` 迭代时，会设定一个 `bytes_until_read_sampling_`，这个值是 0 ~ 1MB 中的一个正态分布随机值，如果迭代的数据量达到了这个上限，便会进行一次 sampling 操作，统计 SST 的读取统计信息，和上面的 `Get` 操作类似，如果某 SST 的 `allowed_seek` 耗尽，便会尝试启动后台 compaction 线程。
+- `Put` 与 `Delete` 操作最终会调用 `DBImpl::Write`。调用 `DBImpl::Write` 时会首先调用 `DBImpl::MakeRoomForWrite` 为写操作预留空间。在此方法中，如果发现 mutable 的 `MemTable` 已满，则会将它变为 immutable，然后创建新的 mutable `MemTable`，并尝试启动后台 compaction 线程。
+
+现在再来看看 `DBImpl::MaybeScheduleCompaction`。对于一个 DB，只会产生一个 compaction 线程。具体来说，后台会启动一个 `background_thread` 线程，作为调度器，它的作用是循环抽取后台任务队列 `background_work_queue_` 中的任务进行执行（如果队列为空会进入 wait 状态，有新的任务到来时再被唤醒），后续调用 `DBImpl::MaybeScheduleCompaction` 便会向任务队列推入一个 compaction 任务而不产生新的线程。这里我有一个疑惑是，源代码中是先进行唤醒，再向任务队列中放任务：
+
+```cpp
+// util/env_posix.cc
+
+void PosixEnv::Schedule(
+    void (*background_work_function)(void* background_work_arg),
+    void* background_work_arg) {
+    background_work_mutex_.Lock();
+    // ...
+    // If the queue is empty, the background thread may be waiting for work.
+    if (background_work_queue_.empty()) {
+        background_work_cv_.Signal();
+    }
+    background_work_queue_.emplace(background_work_function, background_work_arg);
+    background_work_mutex_.Unlock();
+}
+
+```
+
+是否先 `emplace` 再 `Signal` 更好，比如：
+
+```cpp
+void PosixEnv::Schedule(
+    void (*background_work_function)(void* background_work_arg),
+    void* background_work_arg) {
+    // ...
+    bool empty = background_work_queue_.empty();
+    background_work_queue_.emplace(background_work_function, background_work_arg);
+    if (empty) {
+        background_work_cv_.Signal();
+    }
+    // ...
+}
+```
+
+但是其实这里并没有问题，先看看 `background_thread` 执行的代码：
+
+```cpp
+void PosixEnv::BackgroundThreadMain() {
+    while (true) {
+        background_work_mutex_.Lock();
+
+        // Wait until there is work to be done.
+        while (background_work_queue_.empty()) {
+            background_work_cv_.Wait();
+        }
+        assert(!background_work_queue_.empty());
+        // ...
+        background_work_mutex_.Unlock();
+        // ...
+    }
+}
+```
+
+这里 `background_work_cv_` 条件变量中的的 mutex 就是 `background_work_mutex_`，就像上一节「[DBImpl::Write 使怎么使用 writers 队列的](#DBImpl-Write-使怎么使用-writers-队列的)」中所说，从 wait 中苏醒后会立刻给 mutex 重新调用 lock，所以这里如果 `background_thread` 在 `Schedule` 的途中被唤醒，它并不会直接继续向下执行，而是会等待任务被推入队列然后释放锁之后才会进入后面的逻辑。
+
+compaction 的调用链为 `DBImpl::BGWork` -> `DBImpl::BackgroundCall` -> `DBImpl::BackgroundCompaction`。
+
