@@ -364,4 +364,70 @@ compaction 的调用链为 `DBImpl::BGWork` -> `DBImpl::BackgroundCall` -> `DBIm
 
 ### Major Compaction
 
-TODO
+如上一小节所说，LevelDB 中，Minor Compaction 和 Major Compaction 不会在一次 compaction 中一起完成。也就是说进行 Major Compaction 的时候 immutable `Memtable` 还是空的。
+
+LevelDB 还提供了手动 compaction（`ManualCompaction`）的功能，这里主要看自动的部分。首先来看 `VersionSet::PickCompaction` 方法，这个方法会生成 `Compaction` 对象，供正式 compaction 使用。这里会有两种策略，一种是 `size_compaction`，一种是 `seek_compaction`，前者优先，并且一次只能选择一种 compaction，如果两种策略都不能执行，则不进行 compaction。`size_compaction` 的依据是 `compaction_score` 是否大于 1，这个值会通过 `VersionSet::Finalize` 这歌方法进行评估，这个方法会得出需要 compaction 的 level 与 `compaction_score`，具体留到后面再看；`seek_compaction` 就是前面提到过的，对一个文件的 `Get` 和 `DBIter` 操作数达到上限后会设置这个文件为需要 compact 的文件（`file_to_compact`）。
+
+对于 `size_compaction`，如果是启动后第一次进行 compaction，则选择该 level 的第一个文件。如果之前该 level 已经经历过 compaction 了，那么在 `VersionSet::compact_pointer_[level]` 中会存下上一次的 compaction 的最后一个 key ，本次 compaction 会选择此 key 之后的第一个文件，更准确地来说，会选择该 level 第一个最大 key 大于 `compact_pointer_[level]` 的文件；如果不存在这样的文件，则选择该 level 的第一个文件。对于这个策略，在 [LevelDB 实现文档](https://github.com/google/leveldb/blob/main/doc/impl.md) 中的描述为：
+
+> Compactions for a particular level rotate through the key space. In more detail, for each level L, we remember the ending key of the last compaction at level L. The next compaction for level L will pick the first file that starts after this key (wrapping around to the beginning of the key space if there is no such file).
+
+相关源码为：
+
+```cpp
+// db/version_set.cc
+
+Compaction* VersionSet::PickCompaction() {
+    Compaction* c;
+    int level;
+
+    // We prefer compactions triggered by too much data in a level over
+    // the compactions triggered by seeks.
+    const bool size_compaction = (current_->compaction_score_ >= 1);
+    const bool seek_compaction = (current_->file_to_compact_ != nullptr);
+    if (size_compaction) {
+        level = current_->compaction_level_;
+        assert(level >= 0);
+        assert(level + 1 < config::kNumLevels);
+        c = new Compaction(options_, level);
+
+        // Pick the first file that comes after compact_pointer_[level]
+        for (size_t i = 0; i < current_->files_[level].size(); i++) {
+        FileMetaData* f = current_->files_[level][i];
+        if (compact_pointer_[level].empty() ||
+            icmp_.Compare(f->largest.Encode(), compact_pointer_[level]) > 0) {
+            c->inputs_[0].push_back(f);
+            break;
+        }
+        }
+        if (c->inputs_[0].empty()) {
+        // Wrap-around to the beginning of the key space
+        c->inputs_[0].push_back(current_->files_[level][0]);
+        }
+    } else if (seek_compaction) {
+        level = current_->file_to_compact_level_;
+        c = new Compaction(options_, level);
+        c->inputs_[0].push_back(current_->file_to_compact_);
+    } else {
+        return nullptr;
+    }
+
+    SetupOtherInputs(c);
+
+    return c;
+}
+
+```
+
+其他细节：
+
+- 上面代码中的 `c->inputs_` 是两个的 `FieldMetaData*` 数组，代表 level 与 level+1 的 compaction inputs。
+- 如果要 compaction 的 level-0，则会继续把 level-0 中与 `c-inputs_[0]` 中有 overlap 的**所有**文件也加入 `c->inputs` 中。还有一个注意的点，在计算 overlapping 的文件时，会逐步扩增 key 的范围直至最大，每一次扩增会重零开始收集 overlapping 的文件。
+
+注意到最后还调用了一个 `VersionSet::SetupOtherInputs` 方法来获取所有 compaction 所需要的 inputs。这里面也是细节慢慢，主要目的是尽可能多地选择更多文件进行 compaction：
+
+- 如果 inputs 中的一个文件的上界等于该 level 中的某一个文件的下界，需要把该文件也加入 inputs 中。（大于 0 的 level 各个文件之间应该不会存在 overlapping，按照代码的逻辑感觉应该不会存在这种情况？这里需要后续确认）这种情况下，这两个文件如果不一起合并，则可能会导致后续的 `Get` 操作读到旧数据。
+- 初步拿到两层的 inputs 之后，会通过现在总的上界和下界去继续扩大 level 的文件范围，然后再继续扩大 level+1 文件的范围，由此反复，直到无法继续进行或总的要 compaction 的文件大小（level 和 level+1）达到上限：25 倍的 `max_file_size`（默认是 2MB）。
+- 最后会将 level 的孙子（level+2）与最终的 inputs 有 overlapping 的文件记录下来供之后使用。
+
+接下来就是正式的进行 compaction 了。TODO
