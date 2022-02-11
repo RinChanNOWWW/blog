@@ -12,7 +12,7 @@ categories:
 
 记录一下学习 LevelDB 遇到的一些问题。
 
-最后更新：2022-02-09。
+最后更新：2022-02-11。
 
 <!-- more -->
 
@@ -430,4 +430,102 @@ Compaction* VersionSet::PickCompaction() {
 - 初步拿到两层的 inputs 之后，会通过现在总的上界和下界去继续扩大 level 的文件范围，然后再继续扩大 level+1 文件的范围，由此反复，直到无法继续进行或总的要 compaction 的文件大小（level 和 level+1）达到上限：25 倍的 `max_file_size`（默认是 2MB）。
 - 最后会将 level 的孙子（level+2）与最终的 inputs 有 overlapping 的文件记录下来供之后使用。
 
-接下来就是正式的进行 compaction 了。TODO
+接下来就是正式的进行 compaction 了。由 `DBImpl::DoCompactionWork` 这个方法完成。先来看下 impl 文档的描述：
+
+> A compaction merges the contents of the picked files to produce a sequence of level-(L+1) files. We switch to producing a new level-(L+1) file after the current output file has reached the target file size (2MB). We also switch to a new output file when the key range of the current output file has grown enough to overlap more than ten level-(L+2) files. This last rule ensures that a later compaction of a level-(L+1) file will not pick up too much data from level-(L+2). The old files are discarded and the new files are added to the serving state.
+
+一般情况下很好理解，结合源码来看，首先会为 compaction inputs 生成一个 `MergingIterator`，这个迭代器的作用就i是每次返回一个最小最新的 key（这里还涉及 key 以及 user_key 的关系与编码，以及 comparator 的实现，之后再看）。在一般情况下，会构建一个新的 output 文件，将每次迭代的结构 add 到该文件中，如果这个 output 文件达到了 `max_file_size`（默认 2MB），便会将这个文件落盘，然后创建一个新的 output 文件，后续的 kv 继续添加到新文件中。在添加到新文件之前，需要判断是否该 key 是否已经加入了（最新的 key 会先加入）或者是否是 `Delete` 操作，这种 key 直接抛弃（不加入到 output 中）。
+
+这里依然存在一些特殊情况与细节：
+
+- 如果在归并过程中发现有新的 immutable `MemTable` 生成，需要先将其 dump 到 level-0。
+- 如果在归并过程中发现与 level+2 层的 overlapping 过大，不用等到 `max_file_size` 就直接生成 output 文件，之后的 key 进入新 output 文件。
+- 如果 level+2 层及更高层的 level 包含了某 key，怎么此层的 compaction 不能直接丢弃掉 `Delete` 操作的 key。
+
+做完 merge 之后会调用 `DBImpl::InstallCompactionResults` 标记需要删除的文件与新加入的文件，并进一步调用 `VersionSet::LogAndApply` 更新 DB 的元信息并重新评估各 level 的 score。最后再调用 `DBImpl::CleanupCompaction` 清理 compaction 过程占用的内存与 `pending_outputs_` 解除对文件的锁定，最后在调用 `DBImpl::RemoveObsoleteFiles` 清理到上面说的标记为删除的文件，这样就完成了一次 compaction。
+
+### 如何评估一个 level 是否该被 compaction
+
+最后快速看一下 `VersionSet::Finalize` 这个方法，这个方法会在 `VersionSet::LogAndApply` 和 `VersionSet::Recover` 中被调用，是在某个操作收尾时重新对所有 level 进行评估，来得出下一次 compaction 的 level。这个评估的策略非常简单，就是给每一层打分，每一层的分数就是该层的文件总大小除以该层的最大容量阈值（L层的阈值为 10^L MB），下一次 compaction 会选择分数最大的层。level-0 比较特殊，它的分数为文件数除以 `config::kL0_CompactionTrigger`（也就是 4）。
+
+### 总结
+
+总结来说，一次 compaction 操作一般只会选择一个 level 的一个文件及其 overlap 的文件（除非 compaction 过程中生成了 immutable `MemTable`，这种情况会立即进行一次 minor compaction）。再一次 compaction 之后会立刻对所有 level 进行重新评估，然后再次调用 `DBImpl::MaybeScheduleCompaction` 查看是否还能继续 compaction，如果可以，则往后台任务队列提交一个新的 compaction 任务。这样看下来，LevelDB 的写放大问题还挺大的。
+
+最后用伪代码简单梳理一下整个 compaction 的逻辑：
+
+```cpp
+// db/db_impl.cc
+
+void DBImpl::MaybeScheduleCompaction() {
+    // ...
+    if (NeedCompaction()) {
+        // ...
+        env_->Schedule(&DBImpl::BGWork, this);
+    }
+}
+
+void DBImpl::BGWork(void* db) {
+    reinterpret_cast<DBImpl*>(db)->BackgroundCall();
+}
+
+void DBImpl::BackgroundCall() {
+    // ...
+    BackgroundCompaction();
+    // ...
+    MaybeScheduleCompaction();
+    // ...
+}   
+
+void DBImpl::BackgroundCompaction() {
+    if (imm_ != nullptr) {
+        CompactMemTable();
+        return;
+    }
+    // ...
+    c = versions_->PickCompaction();
+    // ...
+    CompactionState *compact = new CompactionState(c);
+    status = DoCompactionWork(compact);
+    CleanupCompaction(compact);
+    c->ReleaseInputs();
+    RemoveObsoleteFiles();
+    // ...
+}
+
+Status DBImpl::DoCompactionWork(CompactionState* compact) {
+    // ...
+    Iterator* input = versions_->MakeInputIterator(compact->compaction);
+    // ...
+    while (input->Valid()) {
+        if (HasImmutableMemTable()) {
+            DoMinorCompaction();
+        }
+        // ...
+        if (!HasOutputFile()) {
+            NewOutputFile();
+        }
+        AddToOutput(input);
+        if (OutputShouldFinish()) {
+            FinishCompactionOutputFile(compact, input);
+            NewOutputFile();
+        }
+        // ...
+        input->Next();
+    }
+    // ...
+    InstallCompactionResults(compact);
+    // ...
+}
+
+Status DBImpl::InstallCompactionResults(CompactionState* compact) {
+    // ...
+    AddDeleteFiles();
+    AddNewFiles();
+    return versions_->LogAndApply(compact->compaction->edit(), &mutex_); // will call Finalize(v)
+}
+```
+
+## key 是如何组织和进行比较的
+
+TODO
