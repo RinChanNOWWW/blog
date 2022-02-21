@@ -12,7 +12,7 @@ categories:
 
 记录一下学习 LevelDB 遇到的一些问题。
 
-最后更新：2022-02-11。
+最后更新：2022-02-21。
 
 <!-- more -->
 
@@ -526,6 +526,31 @@ Status DBImpl::InstallCompactionResults(CompactionState* compact) {
 }
 ```
 
+## 数据压缩的粒度是什么
+
+Block。进行 `WriteBlock` 时会调用 `port::Snappy_Compress`；进行 `ReadBlock` 时会调用 `port::Snappy_Uncompress`。
+
+## 如何保证 snapshot 不被 compaction 掉
+
+在调用 `DBImpl::DoCompactionWork` 中会为 `CompactionState` 实例 `compact` 设置一个 `smallest_snapshot` 字段，如果 `DBImpl` 实例中有 snaphost，则将其设置为最老的那个 snaphost 的 seq，否则设置为最新的 seq。这个 `smallest_snapshot` 字段会在后续用于判断是否要删除这个 key，剩下的完整的逻辑就不言而喻了。
+
 ## key 是如何组织和进行比较的
 
-TODO
+在 `MemTable` 中，一条 kv 记录（entry）的格式是这样的：
+
+```
+Format of an entry is concatenation of:
+key_size     : varint32 of internal_key.size()
+key bytes    : char[internal_key.size()]
+tag          : uint64((sequence << 8) | type)
+value_size   : varint32 of value.size()
+value bytes  : char[value.size()]
+```
+
+由此可见，一个 entry 里还带有 seq，在比较（或者说做排序）的时候会同时依照 key (aka. user_key) 和 seq （其实还有 type，但是 user_key 和 seq 其实已经足够了）来判断。具体的策略是，按照 user_key 升序排列，同样的 user_key 按照 seq 降序排列（同样的 user_key 依照 type 降序排列，应该不会用到这个策略）。
+
+在 SST 中，顺序是和 `MemTable` 中的顺序是一致的。
+
+所以不管是在 `MemTable` 还是在 SST 中，都是相同的 user_key user_key 更小，seq 更大的在前面。举个例子，如果用 key_seq 来表示一个 entry，那么可能会存在这样的一个序列：k1_10, k1_7, k1_3, k2_11, k3_9....
+
+而之前的关于 `AddBoundaryInputs` 这个方法的疑惑就解决了，这个函数是为了 compaction 的时候需要把 user_key 相同的 entry 都给囊括了，不然会出现旧数据在低层的情况。因为一个完整的 key 包含了 user_key 和 seq，所以 k1_2 和 k1_1 可以看作是两个不同的 key（也就是他们不是 overlap 的），所以可能存在于不同的 SST 文件中，因此 compaction 在 pick file 的时候需要处理这种边界情况。
