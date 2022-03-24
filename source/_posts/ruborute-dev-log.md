@@ -11,6 +11,36 @@ categories:
 作为一个 SDVX 玩家，有一天在水群的时候看到了一位群友发了一下自己做的统计得分数据的脚本，于是催生了自己做一个查分器的想法。于是就有了 [ruborute](https://github.com/RinChanNOWWW/ruborute) 这个项目。它的读音为 "Are you 暴龍天(ぼるて, borute)?"。我打算用这个文章来记录我在开发过程中思路。
 
 <!-- more -->
+## 2022-03-24
+
+由于自己搭了游戏服务器，所以不再使用氧无了。`ruborute` 仅支持氧无，所以需要添加对服务器上的 MySQL 数据库访问的支持。所以对整个项目结构进行了重构。首先是把游戏记录与歌曲信息的数据结构分离出来了一个 `model` 模块，然后将对氧无文件的访问放到了 `data_source` 模块，并抽象除了一个 `DataSource` trait，之后对服务器数据库的访问只需要实现这个 trait 即可。
+
+由于有两个读取方式，所以也重构了一下命令行参数的读取，并抽象出来了一个 `config` 模块，以前只是单独的一个 `Opt` 结构。这里参考了 [databend](https://github.com/datafuselabs/databend) 对参数与配置文件读取的封装，使得软件既可以从命令行选项中获取参数，也可以从一个 `toml` 文件中获取。
+
+经过这样一些操作之后，两种数据获取方式就可以由一下方式进行调度：
+
+```rust
+impl Cmdline {
+  pub fn new(cfg: Config) -> Result<Self> {
+    // ...
+    match data_source::AsphyxiaDataSource::open(cfg.asyphyxia) {
+      // load from asyphyxia first
+      Ok(s) => cmdline.add_commands(Rc::new(s)),
+      // if load asyphyxia, load from bemaniutils server
+      _ => cmdline.add_commands(Rc::new(data_source::BemaniutilsDataSource::open(
+          cfg.bemaniutils,
+      )?)),
+    };
+  }
+
+  fn add_commands<D: 'static + DataSource>(&mut self, ds: Rc<D>) {
+    self.add_command(Box::new(CmdRecord::new(Rc::clone(&ds))));
+    self.add_command(Box::new(CmdBest50::new(Rc::clone(&ds))));
+    self.add_command(Box::new(CmdVolforce::new(Rc::clone(&ds))));
+    self.add_command(Box::new(CmdCount::new(Rc::clone(&ds))));
+  }
+}
+```
 
 ## 2021-9-18
 
