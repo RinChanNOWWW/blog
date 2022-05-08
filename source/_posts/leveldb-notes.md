@@ -12,7 +12,7 @@ categories:
 
 记录一下学习 LevelDB 遇到的一些问题。
 
-最后更新：2022-02-21。
+最后更新：2022-05-08。
 
 <!-- more -->
 
@@ -366,7 +366,7 @@ compaction 的调用链为 `DBImpl::BGWork` -> `DBImpl::BackgroundCall` -> `DBIm
 
 如上一小节所说，LevelDB 中，Minor Compaction 和 Major Compaction 不会在一次 compaction 中一起完成。也就是说进行 Major Compaction 的时候 immutable `Memtable` 还是空的。
 
-LevelDB 还提供了手动 compaction（`ManualCompaction`）的功能，这里主要看自动的部分。首先来看 `VersionSet::PickCompaction` 方法，这个方法会生成 `Compaction` 对象，供正式 compaction 使用。这里会有两种策略，一种是 `size_compaction`，一种是 `seek_compaction`，前者优先，并且一次只能选择一种 compaction，如果两种策略都不能执行，则不进行 compaction。`size_compaction` 的依据是 `compaction_score` 是否大于 1，这个值会通过 `VersionSet::Finalize` 这歌方法进行评估，这个方法会得出需要 compaction 的 level 与 `compaction_score`，具体留到后面再看；`seek_compaction` 就是前面提到过的，对一个文件的 `Get` 和 `DBIter` 操作数达到上限后会设置这个文件为需要 compact 的文件（`file_to_compact`）。
+LevelDB 还提供了手动 compaction（`ManualCompaction`）的功能，这里主要看自动的部分。首先来看 `VersionSet::PickCompaction` 方法，这个方法会生成 `Compaction` 对象，供正式 compaction 使用。这里会有两种策略，一种是 `size_compaction`，一种是 `seek_compaction`，前者优先，并且一次只能选择一种 compaction，如果两种策略都不能执行，则不进行 compaction。`size_compaction` 的依据是 `compaction_score` 是否大于 1，这个值会通过 `VersionSet::Finalize` 这个方法进行评估，这个方法会得出需要 compaction 的 level 与 `compaction_score`，具体留到后面再看；`seek_compaction` 就是前面提到过的，对一个文件的 `Get` 和 `DBIter` 操作数达到上限后会设置这个文件为需要 compact 的文件（`file_to_compact`）。
 
 对于 `size_compaction`，如果是启动后第一次进行 compaction，则选择该 level 的第一个文件。如果之前该 level 已经经历过 compaction 了，那么在 `VersionSet::compact_pointer_[level]` 中会存下上一次的 compaction 的最后一个 key ，本次 compaction 会选择此 key 之后的第一个文件，更准确地来说，会选择该 level 第一个最大 key 大于 `compact_pointer_[level]` 的文件；如果不存在这样的文件，则选择该 level 的第一个文件。对于这个策略，在 [LevelDB 实现文档](https://github.com/google/leveldb/blob/main/doc/impl.md) 中的描述为：
 
@@ -424,9 +424,9 @@ Compaction* VersionSet::PickCompaction() {
 - 上面代码中的 `c->inputs_` 是两个的 `FieldMetaData*` 数组，代表 level 与 level+1 的 compaction inputs。
 - 如果要 compaction 的 level-0，则会继续把 level-0 中与 `c-inputs_[0]` 中有 overlap 的**所有**文件也加入 `c->inputs` 中。还有一个注意的点，在计算 overlapping 的文件时，会逐步扩增 key 的范围直至最大，每一次扩增会重零开始收集 overlapping 的文件。
 
-注意到最后还调用了一个 `VersionSet::SetupOtherInputs` 方法来获取所有 compaction 所需要的 inputs。这里面也是细节慢慢，主要目的是尽可能多地选择更多文件进行 compaction：
+注意到最后还调用了一个 `VersionSet::SetupOtherInputs` 方法来获取所有 compaction 所需要的 inputs。这里面也是细节满满，主要目的是尽可能多地选择更多文件进行 compaction：
 
-- 如果 inputs 中的一个文件的上界等于该 level 中的某一个文件的下界，需要把该文件也加入 inputs 中。（大于 0 的 level 各个文件之间应该不会存在 overlapping，按照代码的逻辑感觉应该不会存在这种情况？这里需要后续确认）这种情况下，这两个文件如果不一起合并，则可能会导致后续的 `Get` 操作读到旧数据。
+- 如果 inputs 中的一个文件的上界等于该 level 中的某一个文件的下界，需要把该文件也加入 inputs 中。这里可能会有个疑惑，就是按理来说同一层（除了 level-0）的 SST 应该不会出现这种情况，其实这种情况是可能出现的，因为 LevelDB 支持了快照（Snapshot）的功能，所以在有快照存在的情况下，同一层的 SST 之间是可能存在重复的 key 的（user_key 相同，seq不同）。这种情况下，这两个文件如果不一起合并，则可能会导致后续的 `Get` 操作读到旧数据。
 - 初步拿到两层的 inputs 之后，会通过现在总的上界和下界去继续扩大 level 的文件范围，然后再继续扩大 level+1 文件的范围，由此反复，直到无法继续进行或总的要 compaction 的文件大小（level 和 level+1）达到上限：25 倍的 `max_file_size`（默认是 2MB）。
 - 最后会将 level 的孙子（level+2）与最终的 inputs 有 overlapping 的文件记录下来供之后使用。
 
@@ -440,7 +440,7 @@ Compaction* VersionSet::PickCompaction() {
 
 - 如果在归并过程中发现有新的 immutable `MemTable` 生成，需要先将其 dump 到 level-0。
 - 如果在归并过程中发现与 level+2 层的 overlapping 过大，不用等到 `max_file_size` 就直接生成 output 文件，之后的 key 进入新 output 文件。
-- 如果 level+2 层及更高层的 level 包含了某 key，怎么此层的 compaction 不能直接丢弃掉 `Delete` 操作的 key。
+- 如果 level+2 层及更高层的 level 包含了某 key，那么此层的 compaction 不能直接丢弃掉 `Delete` 操作的 key。
 
 做完 merge 之后会调用 `DBImpl::InstallCompactionResults` 标记需要删除的文件与新加入的文件，并进一步调用 `VersionSet::LogAndApply` 更新 DB 的元信息并重新评估各 level 的 score。最后再调用 `DBImpl::CleanupCompaction` 清理 compaction 过程占用的内存与 `pending_outputs_` 解除对文件的锁定，最后在调用 `DBImpl::RemoveObsoleteFiles` 清理到上面说的标记为删除的文件，这样就完成了一次 compaction。
 
@@ -552,5 +552,3 @@ value bytes  : char[value.size()]
 在 SST 中，顺序是和 `MemTable` 中的顺序是一致的。
 
 所以不管是在 `MemTable` 还是在 SST 中，都是相同的 user_key user_key 更小，seq 更大的在前面。举个例子，如果用 key_seq 来表示一个 entry，那么可能会存在这样的一个序列：k1_10, k1_7, k1_3, k2_11, k3_9....
-
-而之前的关于 `AddBoundaryInputs` 这个方法的疑惑就解决了，这个函数是为了 compaction 的时候需要把 user_key 相同的 entry 都给囊括了，不然会出现旧数据在低层的情况。因为一个完整的 key 包含了 user_key 和 seq，所以 k1_2 和 k1_1 可以看作是两个不同的 key（也就是他们不是 overlap 的），所以可能存在于不同的 SST 文件中，因此 compaction 在 pick file 的时候需要处理这种边界情况。
