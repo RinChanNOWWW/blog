@@ -13,6 +13,8 @@ categories:
 
 PingCAP incubator 的项目，实现一个微型 TiKV（以及 PD）。在此文章中记录一下开发中的值得注意的点。
 
+最后更新：2022-05-08
+
 <!-- more -->
 
 ## Project 1
@@ -41,24 +43,26 @@ PingCAP incubator 的项目，实现一个微型 TiKV（以及 PD）。在此文
 
 ### Part B
 
+这一个部分可以所示驱动整个 RaftStore 的中枢，是 Project 3 的基础。
+
 这一部分的实现一开始完全没有头绪，所以很大程度上参考了 https://github.com/platoneko/tinykv 的实现。这一部分主要实现的是如何将 Raft 协议同步的日志 apply 到 upper application 中，也就是如何将 Raft 日志中记录的 KV 操作应用到实际的存储引擎中。
 
 主要的步骤就是：
 
 1. 集群接收到 KV 操作，并交给 Leader 节点。
-2. Leader 节点将 KV 操作转换为 Raft 日志，通过 propose 操作开启 Raft 同步算法。
-3. 每个节点都通过 `rawnode` 中定义的 `Ready` 接口拿到此时自己节点的状态与日志信息，并将其应用到实际的存储中（`SaveReady`)。最后更新 stable 与 applied 信息（`Advance`）。
+2. `peerMsgHandler.proposeRaftCommand`：Leader 节点将 KV 操作转换为 Raft 日志，再 propose 到 Raft 流程中。
+3. `peerMsgHandler.HandleRaftReady`：每个节点都通过 `rawnode` 中定义的 `Ready` 接口拿到此时自己节点的状态与日志信息，并将其应用到实际的存储中（`SaveReady`)。最后更新 stable 与 applied 信息（`Advance`）。除了 Raft 集群的状态信息外，每次会将节点当前的所有未落盘的 log（`Ready.Entries`）与未落盘的快照（`Ready.Snapshot`）持久化，然后向各节点发送 Raft 信息（`Ready.Messages`），然后依次处理没有处理的 proposals（proposals 与 `Ready.CommitedEntries` 一一对应，`Ready.CommitedEntries` 为当前节点 commit 了但是没有 apply 到状态机的 log）。
 4. 应用完日志之后还需向客户端返回响应，实现中体现为给 proposal 的回调字段添加返回信息，并通知 channel。
 
 这里面一开始困扰我的就是不知道整个集群是如何应用 Raft 日志的，其实十分简单，就是每个节点都会持续运行一个 worker 来检查 Raft 层的状态，如果能够进行处理那就进行处理，不行就等待下一次循环。在这之中需要注意的是对 snapshot 的特殊处理。
 
 ### Part C
 
-这部分实现了 Raft 算法中对 snapshot 处理。对于进行压缩处理的相关逻辑与代码已经被实现不用我自己实现，需要我来实现的就只有添加发送 snapshot 与接受 snapshot 的逻辑，以及完善之前代码中需要 check snapshot
+在 Raft 中，snapshot 是为了处理这样一种情况：leader 前面有一部分 log 已经落盘且通过 GC 进行了压缩清理（假设 index = a 及之前的 log 已经被 GC），然而存在 follower 没有 index = a 之前的 log，需要由 leader 通过 append 操作补全。这种情况下， leader 已经无法取得 index = a 以及之前的 log 了，也就无法将这些 log 发送给 follower，这时就需要通过 snapshot 解决。snapshot 是从状态机中取出，所以肯定是共识后后数据，可以直接被 apply 到 follower 的状态机中。
 
-的部分。
+在实现上，当 follower 收到 snapshot 的 log 时，会先把它保存在 `Raft.pendingSnapshot` 中，当这条 snapshot log 被 commit 了，然后上层要对其进行应用时，会将此 `pendingSnapshot` 取出（通过 `Ready`），然后应用到状态机中（进行落盘）。
 
-这里需要解决的疑惑是，**snapshot 都是无法访问的**。TinyKV 会启动协程定期对日志进行压缩处理，**一旦日志被压缩了，那它便不会被 Raft 算法涉及**。snapshot 和日志一样，在没有被 upper application 处理之前，都一直处于 pending 状态。所以当 Leader 读取日志时发现读不到的时候，它就知道有日志被压缩成 snapshot 了，它就需要向 Follower 同步这个 snapshot。想明白了这些实现起来就容易了。
+对 snapshot 进行提取、落盘的操作 TinyKV 框架已经提供了相关接口，不用自己实现，需要实现的就只有添加发送 snapshot 、接受 snapshot 以及应用 snapshot 的逻辑，以及完善之前代码中需要 check snapshot 的部分。这部分的操作和 Part B 中的其他操作是一样的。
 
 ## Project 3
 
