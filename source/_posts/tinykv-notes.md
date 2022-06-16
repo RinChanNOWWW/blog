@@ -13,7 +13,7 @@ categories:
 
 PingCAP incubator 的项目，实现一个微型 TiKV（以及 PD）。在此文章中记录一下开发中的值得注意的点。
 
-最后更新：2022-05-08
+最后更新：2022-06-16
 
 <!-- more -->
 
@@ -107,6 +107,8 @@ func (r *Raft) Step(m pb.Message) error {
 解决这个问题有很多种方法，比如可以优化上面的这个 `Step` 方法，做特殊判断。我的解决办法是在 `newRaft` 的时候必初始化 `raft.Prs`，为其添加一条针对本节点的记录。
 
 对于此 part 的 test case，都能通过，但是有些有时会超时，也不知道是不是代码的问题，这还需要后续排查。
+
+2022-06-16 Update: 超时问题和 WMC 同学进行了一波讨论，他解决了这个问题，详见他的博客 https://www.wmc1999.top/posts/tinykv-impl/#part-b-1 。
 
 #### 关于 Region 分裂
 
