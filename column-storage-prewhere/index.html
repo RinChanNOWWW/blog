@@ -27,11 +27,15 @@
 <meta property="og:site_name" content="リン屋">
 <meta property="og:description" content="最近学习到了列式存储引擎中的 PREWHERE 优化，写下此文来记录一下与此有关的所见所想。">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/column-storage-prewhere/select-without-prewhere.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/column-storage-prewhere/prewhere-read.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/column-storage-prewhere/read-source-state-machine.png">
 <meta property="article:published_time" content="2022-09-02T10:47:43.000Z">
 <meta property="article:modified_time" content="2022-09-02T10:47:43.000Z">
 <meta property="article:author" content="RinChanNOW">
 <meta property="article:tag" content="数据库">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/column-storage-prewhere/select-without-prewhere.png">
   
   
 
@@ -89,12 +93,12 @@
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> b, c, e <span class="keyword">FROM</span> t <span class="keyword">WHERE</span> a <span class="operator">&gt;</span> <span class="number">1</span> <span class="keyword">AND</span> c <span class="operator">=</span> <span class="number">3</span>;</span><br></pre></td></tr></table></figure>
 
 <p>对于一个简单的列式存储数据库，它的查询流程可能是这样的：</p>
-<p>data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="<img class="lazy" src="" alt="select-without-prewhere"></p>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/column-storage-prewhere/select-without-prewhere.png" alt="select-without-prewhere"></p>
 <p>首先会构建一个如图这样的 <code>Projection-Filter-Scan</code> 执行计划，其中 <code>Scan</code> 算子会从底层存储引擎中读取数据。在一般的列式存储引擎中，列数据会被存储在多个 <code>Partition</code> 中，存储引擎可以以 <code>Parition</code> 会单位读取列数据，并依次向上层算子返回数据。</p>
 <p>再上图的所示的例子中，所有需要进行计算的列 (a, b, c, e) 都会被读取到内存中，并且经由 <code>Filter</code> 算子计算进行行筛选，最后再由 <code>Projection</code> 算法进行最终的列筛选。</p>
 <p>这样的执行过程，其实有一部分开销可以省去的。比如对于列 b 和 列 e，它们并不会参与 <code>Filter</code> 的计算，我们是否可以提前进行筛选，避免不必要的 b 和 e 的读取以及拷贝呢？这便是 <code>PREWHERE</code> 优化的思想。</p>
 <h2 id="PREWHERE-优化"><a href="#PREWHERE-优化" class="headerlink" title="PREWHERE 优化"></a>PREWHERE 优化</h2><p><code>PREWHERE</code> 优化的思想其实很简单，就是将 <code>WHERE</code> 中的条件下推到 <code>Scan</code> 算子中，并尽可能移除 <code>Filter</code> 算子。具体来说，<code>Scan</code> 算子在进行最小读取单位 (可以是 <code>Block</code>，也可以是 <code>Partition</code> 等等，看引擎具体的实现) 的读取时，先预读取 <code>PREWHERE</code> 条件中的列进行预筛选。如果这些行中包含的所有数据都不满足筛选条件，那么这个 <code>Block</code> 或 <code>Partition</code> 就可以直接跳过，不用再读剩下的列了。在这种情况下，会大大节省读取带宽，提升读取速度。</p>
-<p>data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="<img class="lazy" src="" alt="prewhere-read"></p>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/column-storage-prewhere/prewhere-read.png" alt="prewhere-read"></p>
 <p>当然，<code>PREWHERE</code> 不是万金油，当条件语句中的列覆盖了所有需要读取的列是，经过了 <code>PREWHERE</code> 优化的查询就和原始的所有数据一起过 <code>Filter</code> 的查询相差无几了，甚至可能会更慢 (更多分支、内存拷贝等因素)。因此，在实际的实现中，往往会有一些启发式的规则，结合上相关列的数量、在内存中的大小等因素，选择性地将 <code>WHERE</code> 中的条件转移到 <code>PREWHERE</code> 并下推到 <code>Scan</code>。</p>
 <h2 id="ClickHouse-中的-PREWHERE"><a href="#ClickHouse-中的-PREWHERE" class="headerlink" title="ClickHouse 中的 PREWHERE"></a>ClickHouse 中的 <code>PREWHERE</code></h2><p>ClickHouse<sup><a href="https://github.com/ClickHouse/ClickHouse">[1]</a></sup> (以下简称 CK)很早就实现了 <code>PREWHERE</code><sup><a target="_blank" rel="noopener" href="https://clickhouse.com/docs/en/sql-reference/statements/select/prewhere">[2]</a></sup>，并将其作为了一个可以手动使用的语句，例如：</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> t PREWHERE a <span class="operator">&gt;</span> <span class="number">1</span>;</span><br></pre></td></tr></table></figure>
@@ -107,7 +111,10 @@
 <p>可以看出，目前这一部分还是很 naive 的，首先是条件语句几乎是全部传给下一层，除了涉及到所有要读取的列的语句；其次，目前并没有根据统计信息做一些启发式的规则，这个还需要后续的优化。</p>
 <p>另外，让优化器模块来负责 <code>PREWHERE</code> 信息的生成可能不太好，以后修改起来可能会比较麻烦，比如现在还没支持的一个点: Projection 剪枝，就需要牵扯到 <code>prune_columns</code> 这个 Rule。还需要找到一个更好的方法来实现，可以参考其他列式存储数据库的实现方法 (如 DuckDB, Doris 等)。</p>
 <h3 id="数据读取"><a href="#数据读取" class="headerlink" title="数据读取"></a>数据读取</h3><p>Fuse Engine 数据读取相关的源码设计的很巧妙。它将数据读取的流程设计为了一个状态机，这样可以把整个读取流程划分为多个状态。这样做的好处是，可以将同步与异步逻辑分开，提升运行的效率。另外一个好处就是，代码写起来逻辑会更加清晰，代码的维护与修改也更加简单。</p>
-<p>data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="<img class="lazy" src="" alt="state-machine"></p>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/column-storage-prewhere/read-source-state-machine.png" alt="state-machine"></p>
+<p>如图所示，我将以前的 <code>ReadData</code> 拆分为了 <code>ReadPrewhere</code> 与 <code>ReadRemain</code> 两个状态，分别用来读取 <code>PREWHERE</code> 所需要的列与补全剩余列。初次之外，还增加了一个 <code>Filter</code> 状态用来对 <code>ReadDataPrewhere</code> 之后的数据进行过滤，并生成一个 Boolean 类型的列来表示每一行的过滤结果，用 <code>FilterColumn</code> 来表示。值得注意的是，如果没有 <code>Filter</code>，即没有 <code>PREWHERE</code> 信息，则可退化为最初的状态机；另外如果所有列都在 <code>PREWHERE</code> 中，那么在 <code>Filter</code> 之后便可以直接转到 <code>Deserialize</code> 进行 <code>DataBlock</code> 的生成（其实并不会出现这种情况，因为如上文所说，如果所有列都在条件语句中，则不会进行 <code>PREWHERE</code> 优化）。 </p>
+<p>另外一个小细节是，<code>FilterColumn</code> 与 <code>ReadDataPrewhere</code> 后的 raw data 需要从 <code>Filter</code> 一直传递到 <code>Deserialize</code>，以便合并与过滤 (这里是否会有不少内存拷贝的开销？C++可以只传指针，Rust的所有权机制应该也会保证性能吧)。</p>
+<p>当然，在具体的代码实现中还有很多小细节，这里就不做赘述了。</p>
 <h3 id="性能对比"><a href="#性能对比" class="headerlink" title="性能对比"></a>性能对比</h3><p>TODO</p>
 <h3 id="接下来可以继续做的"><a href="#接下来可以继续做的" class="headerlink" title="接下来可以继续做的"></a>接下来可以继续做的</h3><ul>
 <li>如上文所说，<code>PREWHERE</code> 优化还可以对下推到 Fuse Engine 的 <code>Projection</code> (不是 SQL 的 <code>Projection</code>，是 Fuse Engine 需要返回给上层的数据列) 进行剪枝。</li>
