@@ -20,12 +20,12 @@
   <title>关于 LevelDB 的一些问题（个人向） - リン屋</title>
 
   
-    <meta name="description" content="记录一下学习 LevelDB 遇到的一些问题。 最后更新：2022-02-21。">
+    <meta name="description" content="记录一下学习 LevelDB 遇到的一些问题。 最后更新：2022-05-08。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="关于 LevelDB 的一些问题（个人向）">
 <meta property="og:url" content="https://github.com/RinChanNOWWW/leveldb-notes/">
 <meta property="og:site_name" content="リン屋">
-<meta property="og:description" content="记录一下学习 LevelDB 遇到的一些问题。 最后更新：2022-02-21。">
+<meta property="og:description" content="记录一下学习 LevelDB 遇到的一些问题。 最后更新：2022-05-08。">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://wingsxdu.com/posts/database/leveldb/Pick-Level-For-MemTable-Output@2x.png">
 <meta property="article:published_time" content="2022-02-03T11:28:51.000Z">
@@ -88,7 +88,7 @@
 <article class='content md post'>
 <h1 class="article-title"><span>关于 LevelDB 的一些问题（个人向）</span></h1>
 <p>记录一下学习 LevelDB 遇到的一些问题。</p>
-<p>最后更新：2022-02-21。</p>
+<p>最后更新：2022-05-08。</p>
 <span id="more"></span>
 
 <h2 id="为什么每次重新打开-LevelDB-都会生成新的文件"><a href="#为什么每次重新打开-LevelDB-都会生成新的文件" class="headerlink" title="为什么每次重新打开 LevelDB 都会生成新的文件"></a>为什么每次重新打开 LevelDB 都会生成新的文件</h2><p>如果一开始就不存在 DB 相关文件，自然会创建新的，这里主要看一下已经存在旧的文件时的情况。</p>
@@ -159,7 +159,7 @@
 <p>图中最下面的阈值是指，重叠的文件总大小大于 10 倍的 <code>max_file_size</code>（默认是 2MB）。</p>
 <p>这里值得注意的一点是，代码逻辑中，是先写好 SST（落盘），再为它选择 Level。进行完 minor compaction 之后，本次 compaction 任务就结束了，不会再继续进行 major compaction。下一次 compaction 得等到下一次 <code>DBImpl::MaybeScheduleCompaction</code> 的触发。</p>
 <h3 id="Major-Compaction"><a href="#Major-Compaction" class="headerlink" title="Major Compaction"></a>Major Compaction</h3><p>如上一小节所说，LevelDB 中，Minor Compaction 和 Major Compaction 不会在一次 compaction 中一起完成。也就是说进行 Major Compaction 的时候 immutable <code>Memtable</code> 还是空的。</p>
-<p>LevelDB 还提供了手动 compaction（<code>ManualCompaction</code>）的功能，这里主要看自动的部分。首先来看 <code>VersionSet::PickCompaction</code> 方法，这个方法会生成 <code>Compaction</code> 对象，供正式 compaction 使用。这里会有两种策略，一种是 <code>size_compaction</code>，一种是 <code>seek_compaction</code>，前者优先，并且一次只能选择一种 compaction，如果两种策略都不能执行，则不进行 compaction。<code>size_compaction</code> 的依据是 <code>compaction_score</code> 是否大于 1，这个值会通过 <code>VersionSet::Finalize</code> 这歌方法进行评估，这个方法会得出需要 compaction 的 level 与 <code>compaction_score</code>，具体留到后面再看；<code>seek_compaction</code> 就是前面提到过的，对一个文件的 <code>Get</code> 和 <code>DBIter</code> 操作数达到上限后会设置这个文件为需要 compact 的文件（<code>file_to_compact</code>）。</p>
+<p>LevelDB 还提供了手动 compaction（<code>ManualCompaction</code>）的功能，这里主要看自动的部分。首先来看 <code>VersionSet::PickCompaction</code> 方法，这个方法会生成 <code>Compaction</code> 对象，供正式 compaction 使用。这里会有两种策略，一种是 <code>size_compaction</code>，一种是 <code>seek_compaction</code>，前者优先，并且一次只能选择一种 compaction，如果两种策略都不能执行，则不进行 compaction。<code>size_compaction</code> 的依据是 <code>compaction_score</code> 是否大于 1，这个值会通过 <code>VersionSet::Finalize</code> 这个方法进行评估，这个方法会得出需要 compaction 的 level 与 <code>compaction_score</code>，具体留到后面再看；<code>seek_compaction</code> 就是前面提到过的，对一个文件的 <code>Get</code> 和 <code>DBIter</code> 操作数达到上限后会设置这个文件为需要 compact 的文件（<code>file_to_compact</code>）。</p>
 <p>对于 <code>size_compaction</code>，如果是启动后第一次进行 compaction，则选择该 level 的第一个文件。如果之前该 level 已经经历过 compaction 了，那么在 <code>VersionSet::compact_pointer_[level]</code> 中会存下上一次的 compaction 的最后一个 key ，本次 compaction 会选择此 key 之后的第一个文件，更准确地来说，会选择该 level 第一个最大 key 大于 <code>compact_pointer_[level]</code> 的文件；如果不存在这样的文件，则选择该 level 的第一个文件。对于这个策略，在 <a href="https://github.com/google/leveldb/blob/main/doc/impl.md">LevelDB 实现文档</a> 中的描述为：</p>
 <blockquote>
 <p>Compactions for a particular level rotate through the key space. In more detail, for each level L, we remember the ending key of the last compaction at level L. The next compaction for level L will pick the first file that starts after this key (wrapping around to the beginning of the key space if there is no such file).</p>
@@ -172,9 +172,9 @@
 <li>上面代码中的 <code>c-&gt;inputs_</code> 是两个的 <code>FieldMetaData*</code> 数组，代表 level 与 level+1 的 compaction inputs。</li>
 <li>如果要 compaction 的 level-0，则会继续把 level-0 中与 <code>c-inputs_[0]</code> 中有 overlap 的<strong>所有</strong>文件也加入 <code>c-&gt;inputs</code> 中。还有一个注意的点，在计算 overlapping 的文件时，会逐步扩增 key 的范围直至最大，每一次扩增会重零开始收集 overlapping 的文件。</li>
 </ul>
-<p>注意到最后还调用了一个 <code>VersionSet::SetupOtherInputs</code> 方法来获取所有 compaction 所需要的 inputs。这里面也是细节慢慢，主要目的是尽可能多地选择更多文件进行 compaction：</p>
+<p>注意到最后还调用了一个 <code>VersionSet::SetupOtherInputs</code> 方法来获取所有 compaction 所需要的 inputs。这里面也是细节满满，主要目的是尽可能多地选择更多文件进行 compaction：</p>
 <ul>
-<li>如果 inputs 中的一个文件的上界等于该 level 中的某一个文件的下界，需要把该文件也加入 inputs 中。（大于 0 的 level 各个文件之间应该不会存在 overlapping，按照代码的逻辑感觉应该不会存在这种情况？这里需要后续确认）这种情况下，这两个文件如果不一起合并，则可能会导致后续的 <code>Get</code> 操作读到旧数据。</li>
+<li>如果 inputs 中的一个文件的上界等于该 level 中的某一个文件的下界，需要把该文件也加入 inputs 中。这里可能会有个疑惑，就是按理来说同一层（除了 level-0）的 SST 应该不会出现这种情况，其实这种情况是可能出现的，因为 LevelDB 支持了快照（Snapshot）的功能，所以在有快照存在的情况下，同一层的 SST 之间是可能存在重复的 key 的（user_key 相同，seq不同）。这种情况下，这两个文件如果不一起合并，则可能会导致后续的 <code>Get</code> 操作读到旧数据。</li>
 <li>初步拿到两层的 inputs 之后，会通过现在总的上界和下界去继续扩大 level 的文件范围，然后再继续扩大 level+1 文件的范围，由此反复，直到无法继续进行或总的要 compaction 的文件大小（level 和 level+1）达到上限：25 倍的 <code>max_file_size</code>（默认是 2MB）。</li>
 <li>最后会将 level 的孙子（level+2）与最终的 inputs 有 overlapping 的文件记录下来供之后使用。</li>
 </ul>
@@ -187,7 +187,7 @@
 <ul>
 <li>如果在归并过程中发现有新的 immutable <code>MemTable</code> 生成，需要先将其 dump 到 level-0。</li>
 <li>如果在归并过程中发现与 level+2 层的 overlapping 过大，不用等到 <code>max_file_size</code> 就直接生成 output 文件，之后的 key 进入新 output 文件。</li>
-<li>如果 level+2 层及更高层的 level 包含了某 key，怎么此层的 compaction 不能直接丢弃掉 <code>Delete</code> 操作的 key。</li>
+<li>如果 level+2 层及更高层的 level 包含了某 key，那么此层的 compaction 不能直接丢弃掉 <code>Delete</code> 操作的 key。</li>
 </ul>
 <p>做完 merge 之后会调用 <code>DBImpl::InstallCompactionResults</code> 标记需要删除的文件与新加入的文件，并进一步调用 <code>VersionSet::LogAndApply</code> 更新 DB 的元信息并重新评估各 level 的 score。最后再调用 <code>DBImpl::CleanupCompaction</code> 清理 compaction 过程占用的内存与 <code>pending_outputs_</code> 解除对文件的锁定，最后在调用 <code>DBImpl::RemoveObsoleteFiles</code> 清理到上面说的标记为删除的文件，这样就完成了一次 compaction。</p>
 <h3 id="如何评估一个-level-是否该被-compaction"><a href="#如何评估一个-level-是否该被-compaction" class="headerlink" title="如何评估一个 level 是否该被 compaction"></a>如何评估一个 level 是否该被 compaction</h3><p>最后快速看一下 <code>VersionSet::Finalize</code> 这个方法，这个方法会在 <code>VersionSet::LogAndApply</code> 和 <code>VersionSet::Recover</code> 中被调用，是在某个操作收尾时重新对所有 level 进行评估，来得出下一次 compaction 的 level。这个评估的策略非常简单，就是给每一层打分，每一层的分数就是该层的文件总大小除以该层的最大容量阈值（L层的阈值为 10^L MB），下一次 compaction 会选择分数最大的层。level-0 比较特殊，它的分数为文件数除以 <code>config::kL0_CompactionTrigger</code>（也就是 4）。</p>
@@ -203,7 +203,6 @@
 <p>由此可见，一个 entry 里还带有 seq，在比较（或者说做排序）的时候会同时依照 key (aka. user_key) 和 seq （其实还有 type，但是 user_key 和 seq 其实已经足够了）来判断。具体的策略是，按照 user_key 升序排列，同样的 user_key 按照 seq 降序排列（同样的 user_key 依照 type 降序排列，应该不会用到这个策略）。</p>
 <p>在 SST 中，顺序是和 <code>MemTable</code> 中的顺序是一致的。</p>
 <p>所以不管是在 <code>MemTable</code> 还是在 SST 中，都是相同的 user_key user_key 更小，seq 更大的在前面。举个例子，如果用 key_seq 来表示一个 entry，那么可能会存在这样的一个序列：k1_10, k1_7, k1_3, k2_11, k3_9….</p>
-<p>而之前的关于 <code>AddBoundaryInputs</code> 这个方法的疑惑就解决了，这个函数是为了 compaction 的时候需要把 user_key 相同的 entry 都给囊括了，不然会出现旧数据在低层的情况。因为一个完整的 key 包含了 user_key 和 seq，所以 k1_2 和 k1_1 可以看作是两个不同的 key（也就是他们不是 overlap 的），所以可能存在于不同的 SST 文件中，因此 compaction 在 pick file 的时候需要处理这种边界情况。</p>
 
 
 <div class="article-footer reveal fs14"><section id="license"><div class="header"><span>许可协议</span></div><div class="body"><p>本文采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">署名-非商业性使用-相同方式共享 4.0 国际</a> 许可协议，转载请注明出处。</p>

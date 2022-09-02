@@ -20,12 +20,12 @@
   <title>TinyKV 实现笔记 - リン屋</title>
 
   
-    <meta name="description" content="原项目：https:&#x2F;&#x2F;github.com&#x2F;tidb-incubator&#x2F;tinykv 我的实现：https:&#x2F;&#x2F;github.com&#x2F;RinChanNOWWW&#x2F;tinykv-impl PingCAP incubator 的项目，实现一个微型 TiKV（以及 PD）。在此文章中记录一下开发中的值得注意的点。">
+    <meta name="description" content="原项目：https:&#x2F;&#x2F;github.com&#x2F;tidb-incubator&#x2F;tinykv 我的实现：https:&#x2F;&#x2F;github.com&#x2F;RinChanNOWWW&#x2F;tinykv-impl PingCAP incubator 的项目，实现一个微型 TiKV（以及 PD）。在此文章中记录一下开发中的值得注意的点。 最后更新：2022-06-16">
 <meta property="og:type" content="article">
 <meta property="og:title" content="TinyKV 实现笔记">
 <meta property="og:url" content="https://github.com/RinChanNOWWW/tinykv-notes/">
 <meta property="og:site_name" content="リン屋">
-<meta property="og:description" content="原项目：https:&#x2F;&#x2F;github.com&#x2F;tidb-incubator&#x2F;tinykv 我的实现：https:&#x2F;&#x2F;github.com&#x2F;RinChanNOWWW&#x2F;tinykv-impl PingCAP incubator 的项目，实现一个微型 TiKV（以及 PD）。在此文章中记录一下开发中的值得注意的点。">
+<meta property="og:description" content="原项目：https:&#x2F;&#x2F;github.com&#x2F;tidb-incubator&#x2F;tinykv 我的实现：https:&#x2F;&#x2F;github.com&#x2F;RinChanNOWWW&#x2F;tinykv-impl PingCAP incubator 的项目，实现一个微型 TiKV（以及 PD）。在此文章中记录一下开发中的值得注意的点。 最后更新：2022-06-16">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-09-12T08:19:51.000Z">
 <meta property="article:modified_time" content="2021-09-12T08:19:51.000Z">
@@ -85,6 +85,7 @@
 <p>原项目：<a href="https://github.com/tidb-incubator/tinykv">https://github.com/tidb-incubator/tinykv</a></p>
 <p>我的实现：<a href="https://github.com/RinChanNOWWW/tinykv-impl">https://github.com/RinChanNOWWW/tinykv-impl</a></p>
 <p>PingCAP incubator 的项目，实现一个微型 TiKV（以及 PD）。在此文章中记录一下开发中的值得注意的点。</p>
+<p>最后更新：2022-06-16</p>
 <span id="more"></span>
 
 <h2 id="Project-1"><a href="#Project-1" class="headerlink" title="Project 1"></a>Project 1</h2><p>基于 badger 实现一个单机存储引擎，没什么好说的。</p>
@@ -93,18 +94,19 @@
 <h4 id="关于-Raft-日志的保存"><a href="#关于-Raft-日志的保存" class="headerlink" title="关于 Raft 日志的保存"></a>关于 Raft 日志的保存</h4><p>在实现过程中，值得注意的是，TinyKV 的 Raft 层中 log 存在于两个部分，一个是内存中的 <code>RaftLog.entries</code>，一个是实际落盘的 <code>RaftLog.storage</code>。一开始我被这两个东西搞得晕头转向，其实一开始就该明确，前者是算法运行过程中实际活跃的 log，而后者是被applied 的 stable 数据。所以 Raft 算法运行过程中所有的日志都应该从 <code>RaftLog.entries</code> 中存取。只不过由于 <code>RaftLog.entries</code> 可能会被清理（被压缩，或者重启 server 等），所以它的第一条日志所对应的 index 可能不是实际的第一个 index，所以需要结合 <code>RaftLog.storage.FirstIndex</code> 来换算。</p>
 <h4 id="关于日志同步"><a href="#关于日志同步" class="headerlink" title="关于日志同步"></a>关于日志同步</h4><p>日志同步是通过 Leader 调用 <code>sendAppend</code> 来向 Follower 批量发送未同步的日志。这里需要注意的是更新 commit 值的时机，除了收到 <code>AppendResponse</code> 外，在成为 Leader 之后也需要立即 check 一遍，因为集群中可能只有 Leader 一个 Node 存在。</p>
 <h4 id="关于状态信息的恢复"><a href="#关于状态信息的恢复" class="headerlink" title="关于状态信息的恢复"></a>关于状态信息的恢复</h4><p>还有一个值得注意的地方就是，在调用 <code>newRaft</code> 的时候需要先从 <code>config.storage</code> 中恢复一些落盘的状态信息：Term, Vote, Commit 以及整个集群的节点配置信息。如果忽略这一点会导致一些 test case 失败。</p>
-<h3 id="Part-B"><a href="#Part-B" class="headerlink" title="Part B"></a>Part B</h3><p>这一部分的实现一开始完全没有头绪，所以很大程度上参考了 <a href="https://github.com/platoneko/tinykv">https://github.com/platoneko/tinykv</a> 的实现。这一部分主要实现的是如何将 Raft 协议同步的日志 apply 到 upper application 中，也就是如何将 Raft 日志中记录的 KV 操作应用到实际的存储引擎中。</p>
+<h3 id="Part-B"><a href="#Part-B" class="headerlink" title="Part B"></a>Part B</h3><p>这一个部分可以所示驱动整个 RaftStore 的中枢，是 Project 3 的基础。</p>
+<p>这一部分的实现一开始完全没有头绪，所以很大程度上参考了 <a href="https://github.com/platoneko/tinykv">https://github.com/platoneko/tinykv</a> 的实现。这一部分主要实现的是如何将 Raft 协议同步的日志 apply 到 upper application 中，也就是如何将 Raft 日志中记录的 KV 操作应用到实际的存储引擎中。</p>
 <p>主要的步骤就是：</p>
 <ol>
 <li>集群接收到 KV 操作，并交给 Leader 节点。</li>
-<li>Leader 节点将 KV 操作转换为 Raft 日志，通过 propose 操作开启 Raft 同步算法。</li>
-<li>每个节点都通过 <code>rawnode</code> 中定义的 <code>Ready</code> 接口拿到此时自己节点的状态与日志信息，并将其应用到实际的存储中（<code>SaveReady</code>)。最后更新 stable 与 applied 信息（<code>Advance</code>）。</li>
+<li><code>peerMsgHandler.proposeRaftCommand</code>：Leader 节点将 KV 操作转换为 Raft 日志，再 propose 到 Raft 流程中。</li>
+<li><code>peerMsgHandler.HandleRaftReady</code>：每个节点都通过 <code>rawnode</code> 中定义的 <code>Ready</code> 接口拿到此时自己节点的状态与日志信息，并将其应用到实际的存储中（<code>SaveReady</code>)。最后更新 stable 与 applied 信息（<code>Advance</code>）。除了 Raft 集群的状态信息外，每次会将节点当前的所有未落盘的 log（<code>Ready.Entries</code>）与未落盘的快照（<code>Ready.Snapshot</code>）持久化，然后向各节点发送 Raft 信息（<code>Ready.Messages</code>），然后依次处理没有处理的 proposals（proposals 与 <code>Ready.CommitedEntries</code> 一一对应，<code>Ready.CommitedEntries</code> 为当前节点 commit 了但是没有 apply 到状态机的 log）。</li>
 <li>应用完日志之后还需向客户端返回响应，实现中体现为给 proposal 的回调字段添加返回信息，并通知 channel。</li>
 </ol>
 <p>这里面一开始困扰我的就是不知道整个集群是如何应用 Raft 日志的，其实十分简单，就是每个节点都会持续运行一个 worker 来检查 Raft 层的状态，如果能够进行处理那就进行处理，不行就等待下一次循环。在这之中需要注意的是对 snapshot 的特殊处理。</p>
-<h3 id="Part-C"><a href="#Part-C" class="headerlink" title="Part C"></a>Part C</h3><p>这部分实现了 Raft 算法中对 snapshot 处理。对于进行压缩处理的相关逻辑与代码已经被实现不用我自己实现，需要我来实现的就只有添加发送 snapshot 与接受 snapshot 的逻辑，以及完善之前代码中需要 check snapshot</p>
-<p>的部分。</p>
-<p>这里需要解决的疑惑是，<strong>snapshot 都是无法访问的</strong>。TinyKV 会启动协程定期对日志进行压缩处理，<strong>一旦日志被压缩了，那它便不会被 Raft 算法涉及</strong>。snapshot 和日志一样，在没有被 upper application 处理之前，都一直处于 pending 状态。所以当 Leader 读取日志时发现读不到的时候，它就知道有日志被压缩成 snapshot 了，它就需要向 Follower 同步这个 snapshot。想明白了这些实现起来就容易了。</p>
+<h3 id="Part-C"><a href="#Part-C" class="headerlink" title="Part C"></a>Part C</h3><p>在 Raft 中，snapshot 是为了处理这样一种情况：leader 前面有一部分 log 已经落盘且通过 GC 进行了压缩清理（假设 index = a 及之前的 log 已经被 GC），然而存在 follower 没有 index = a 之前的 log，需要由 leader 通过 append 操作补全。这种情况下， leader 已经无法取得 index = a 以及之前的 log 了，也就无法将这些 log 发送给 follower，这时就需要通过 snapshot 解决。snapshot 是从状态机中取出，所以肯定是共识后后数据，可以直接被 apply 到 follower 的状态机中。</p>
+<p>在实现上，当 follower 收到 snapshot 的 log 时，会先把它保存在 <code>Raft.pendingSnapshot</code> 中，当这条 snapshot log 被 commit 了，然后上层要对其进行应用时，会将此 <code>pendingSnapshot</code> 取出（通过 <code>Ready</code>），然后应用到状态机中（进行落盘）。</p>
+<p>对 snapshot 进行提取、落盘的操作 TinyKV 框架已经提供了相关接口，不用自己实现，需要实现的就只有添加发送 snapshot 、接受 snapshot 以及应用 snapshot 的逻辑，以及完善之前代码中需要 check snapshot 的部分。这部分的操作和 Part B 中的其他操作是一样的。</p>
 <h2 id="Project-3"><a href="#Project-3" class="headerlink" title="Project 3"></a>Project 3</h2><p>这部分会实现 TiKV 的多 Region 多 Raft Group 机制。</p>
 <h3 id="Part-A-1"><a href="#Part-A-1" class="headerlink" title="Part A"></a>Part A</h3><p>此部分依靠 Raft extend 论文的 Section 6 以及 <a target="_blank" rel="noopener" href="https://web.stanford.edu/~ouster/cgi-bin/papers/OngaroPhD.pdf">https://web.stanford.edu/~ouster/cgi-bin/papers/OngaroPhD.pdf</a> 的 Section 3.10 实现了 Raft 层面的 Leader Transfer 以及节点配置的变化（也就是 Raft 集群的成员变更）。其中对于成员变更的细节主要参考了原论文以及 <a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/375059508">https://zhuanlan.zhihu.com/p/375059508</a> 这篇文章的解读。后者是前者的翻译 + 更加平实的语言的分析。</p>
 <p>本部分实现起来较为简单，主要是复习了一遍 Raft 的成员变更策略，之前面试问到都没想起来……之前读论文的时候这后面的部分读的太水了……</p>
@@ -115,6 +117,7 @@
 <p>从而导致新增加的节点无法处理心跳而超时进行选举，又由于双节点情况下成为 candidate 会立刻成为 leader，这不仅会造成脑裂，而且会导致新节点成为 leader 后进行 append entries 操作更新自己节点的 <code>raft.Prs</code> 出错（在我的设计中，每一个节点，包括自己都会存在 <code>raft.Prs</code> 中，当然如果不这样设计就不会出现这样的问题），因为 <code>raft.Prs</code> 是空的，对其访问会引发访存错误。<strong>新节点中的集群信息需要等待当前 leader 发送 snapshot 进行更新</strong>。</p>
 <p>解决这个问题有很多种方法，比如可以优化上面的这个 <code>Step</code> 方法，做特殊判断。我的解决办法是在 <code>newRaft</code> 的时候必初始化 <code>raft.Prs</code>，为其添加一条针对本节点的记录。</p>
 <p>对于此 part 的 test case，都能通过，但是有些有时会超时，也不知道是不是代码的问题，这还需要后续排查。</p>
+<p>2022-06-16 Update: 超时问题和 WMC 同学进行了一波讨论，他解决了这个问题，详见他的博客 <a target="_blank" rel="noopener" href="https://www.wmc1999.top/posts/tinykv-impl/#part-b-1">https://www.wmc1999.top/posts/tinykv-impl/#part-b-1</a> 。</p>
 <h4 id="关于-Region-分裂"><a href="#关于-Region-分裂" class="headerlink" title="关于 Region 分裂"></a>关于 Region 分裂</h4><p>这个其实很好实现，还是在之前的框架之下，对 <code>raft_cmdpb.AdminCmdType_Split</code> 信息进行处理即可。整个过程就是：</p>
 <ol>
 <li>判断当前 region epoch 是否合法。</li>
