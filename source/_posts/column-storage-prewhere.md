@@ -71,13 +71,44 @@ Fuse Engine 数据读取相关的源码设计的很巧妙。它将数据读取�
 
 如图所示，我将以前的 `ReadData` 拆分为了 `ReadPrewhere` 与 `ReadRemain` 两个状态，分别用来读取 `PREWHERE` 所需要的列与补全剩余列。初次之外，还增加了一个 `Filter` 状态用来对 `ReadDataPrewhere` 之后的数据进行过滤，并生成一个 Boolean 类型的列来表示每一行的过滤结果，用 `FilterColumn` 来表示。值得注意的是，如果没有 `Filter`，即没有 `PREWHERE` 信息，则可退化为最初的状态机；另外如果所有列都在 `PREWHERE` 中，那么在 `Filter` 之后便可以直接转到 `Deserialize` 进行 `DataBlock` 的生成（其实并不会出现这种情况，因为如上文所说，如果所有列都在条件语句中，则不会进行 `PREWHERE` 优化）。 
 
-另外一个小细节是，`FilterColumn` 与 `ReadDataPrewhere` 后的 raw data 需要从 `Filter` 一直传递到 `Deserialize`，以便合并与过滤 (这里是否会有不少内存拷贝的开销？C++可以只传指针，Rust的所有权机制应该也会保证性能吧)。
+另外一个小细节是，`FilterColumn` 与 `ReadDataPrewhere` 后的 raw data 需要从 `Filter` 一直传递到 `Deserialize`，以便合并与过滤 (这里是否会有不少内存拷贝的开销？C++可以只传指针，rustc 和 LLVM 的优化应该也会保证性能吧。但比起 IO 上的开销，内存拷贝的开销应该可以说是微乎其微了)。
 
 当然，在具体的代码实现中还有很多小细节，这里就不做赘述了。
 
 ### 性能对比
 
-TODO
+测试机器相关信息：
+
+- OS: Ubuntu 18.04 LTS (Bionic Beaver)
+- Disk: 885G / 1.9T (50%)
+- CPU: Intel Xeon Gold 5218R @ 80x 2.924GHz [46.0°C]
+- RAM: 8993MiB / 95152MiB
+
+这里进行了一个简单的性能对比。使用的数据集是 https://github.com/datafuselabs/databend/blob/main/tests/logictest/suites/ydb/select1-1.test 这里面的插入数据。我将这些数据每五个作为一次插入，并重复插入直至 21828 条数据。这里是为了保证有一定的数据量，并且数据能够打散在不同的 `Partition` 中。这里使用的 SQL 语句为:
+
+```sql
+select * from t1 where a < 174 and b < 130;
+```
+其中 174 和 130 分别是 a 列和 b 列相对平均的值。我使用了 `hyperfine` 工具来做简单的 benchmark 测试，预热运行 3 次，正式运行 10 次。测试结果如下：
+
+`PREWHER` 优化之前:
+
+| Mean [ms] | Min [ms] | Max [ms] |
+|---:|---:|---:|
+| 856.5 ± 18.5 | 837.5 | 892.0 | 892.0 |
+
+`PREWHERE` 优化之后:
+
+| Mean [ms] | Min [ms] | Max [ms] |
+|---:|---:|---:|
+| 847.0 ± 12.5 | 829.0 | 872.3 |
+
+可以看到，`PREWHERE` 优化之后此查询语句的运行速度大概提升了 10ms (1.11%)，并不是特别明显。并且其他语句诸如 `select * from t1 where a < 174 and b > 130;` 并未见到明显提升，甚至 `PREWHERE` 之后的结果更逊一筹。这里差别不明显的原因主要有以下几点：
+
+- Databend 在 `PREWHERE` 优化之前，便会将 `Filter` 整体下推到 Fuse Engine，用于 `Parition` 的剪枝，也就是会根据 min-max 等索引信息预先过滤掉一些 `Partition`。所以对于一些数据或查询语句，`PREWHERE` 优化之前的性能已经很好了。
+- 对于一些查询语句，`Parition` 无法预先被过滤掉。如果一个 `Partition` 内数据量较大，且不满足 `PREWHERE` 条件，那么 `PREWHERE` 优化的提升效果会很明显。后续优化数据读取逻辑之后（并非每次读一个 `Partition`，而是更加细化），可能会见到比较明显的差别。
+
+本次性能测试还是比较 naive 的。首先是直接使用的 Debug 产物进行测试，其次是数据集太小，且数据分布不太符合真实场景，之后可以考虑使用 TPC-H 进行测试。
 
 ### 接下来可以继续做的
 
