@@ -131,3 +131,10 @@ select * from t1 where a < 174 and b < 130;
 - 感谢 ClickHouse 的源码。
 - 感谢实验室强大的服务器。
 - 感谢 VSCode 与 Rust Analyzer。
+
+## CHANGELOG
+
+- 2022-09-16 Prewhere 优化修改为将 filter predicates 全部下推。https://github.com/datafuselabs/databend/pull/7646
+- 2022-09-11 修复 read rows 统计信息错误。https://github.com/datafuselabs/databend/pull/7566
+- 2022-09-09 优化列数据读取流程，减少反序列化次数。https://github.com/datafuselabs/databend/pull/7551
+- 2022-08-31 初版实现。https://github.com/datafuselabs/databend/pull/7340
