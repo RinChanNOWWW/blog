@@ -69,7 +69,7 @@
 
 <div class="widgets">
 
-<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%97%E5%BC%8F%E5%AD%98%E5%82%A8%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E6%9F%A5%E8%AF%A2%E6%B5%81%E7%A8%8B"><span class="toc-text">列式存储数据库的查询流程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#PREWHERE-%E4%BC%98%E5%8C%96"><span class="toc-text">PREWHERE 优化</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ClickHouse-%E4%B8%AD%E7%9A%84-PREWHERE"><span class="toc-text">ClickHouse 中的 PREWHERE</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Databend-%E4%B8%AD%E7%9A%84-PREWHERE-%E5%AE%9E%E7%8E%B0"><span class="toc-text">Databend 中的 PREWHERE 实现</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#PREWHERE-%E4%B8%8B%E6%8E%A8"><span class="toc-text">PREWHERE 下推</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E8%AF%BB%E5%8F%96"><span class="toc-text">数据读取</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94"><span class="toc-text">性能对比</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8E%A5%E4%B8%8B%E6%9D%A5%E5%8F%AF%E4%BB%A5%E7%BB%A7%E7%BB%AD%E5%81%9A%E7%9A%84"><span class="toc-text">接下来可以继续做的</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#REFERENCE"><span class="toc-text">REFERENCE</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%87%B4%E8%B0%A2"><span class="toc-text">致谢</span></a></li></ol></div></div></div>
+<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%97%E5%BC%8F%E5%AD%98%E5%82%A8%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E6%9F%A5%E8%AF%A2%E6%B5%81%E7%A8%8B"><span class="toc-text">列式存储数据库的查询流程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#PREWHERE-%E4%BC%98%E5%8C%96"><span class="toc-text">PREWHERE 优化</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ClickHouse-%E4%B8%AD%E7%9A%84-PREWHERE"><span class="toc-text">ClickHouse 中的 PREWHERE</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Databend-%E4%B8%AD%E7%9A%84-PREWHERE-%E5%AE%9E%E7%8E%B0"><span class="toc-text">Databend 中的 PREWHERE 实现</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#PREWHERE-%E4%B8%8B%E6%8E%A8"><span class="toc-text">PREWHERE 下推</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E8%AF%BB%E5%8F%96"><span class="toc-text">数据读取</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94"><span class="toc-text">性能对比</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8E%A5%E4%B8%8B%E6%9D%A5%E5%8F%AF%E4%BB%A5%E7%BB%A7%E7%BB%AD%E5%81%9A%E7%9A%84"><span class="toc-text">接下来可以继续做的</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#REFERENCE"><span class="toc-text">REFERENCE</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%87%B4%E8%B0%A2"><span class="toc-text">致谢</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#CHANGELOG"><span class="toc-text">CHANGELOG</span></a></li></ol></div></div></div>
 
 
 </div>
@@ -113,9 +113,54 @@
 <h3 id="数据读取"><a href="#数据读取" class="headerlink" title="数据读取"></a>数据读取</h3><p>Fuse Engine 数据读取相关的源码设计的很巧妙。它将数据读取的流程设计为了一个状态机，这样可以把整个读取流程划分为多个状态。这样做的好处是，可以将同步与异步逻辑分开，提升运行的效率。另外一个好处就是，代码写起来逻辑会更加清晰，代码的维护与修改也更加简单。</p>
 <p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/column-storage-prewhere/read-source-state-machine.png" alt="state-machine"></p>
 <p>如图所示，我将以前的 <code>ReadData</code> 拆分为了 <code>ReadPrewhere</code> 与 <code>ReadRemain</code> 两个状态，分别用来读取 <code>PREWHERE</code> 所需要的列与补全剩余列。初次之外，还增加了一个 <code>Filter</code> 状态用来对 <code>ReadDataPrewhere</code> 之后的数据进行过滤，并生成一个 Boolean 类型的列来表示每一行的过滤结果，用 <code>FilterColumn</code> 来表示。值得注意的是，如果没有 <code>Filter</code>，即没有 <code>PREWHERE</code> 信息，则可退化为最初的状态机；另外如果所有列都在 <code>PREWHERE</code> 中，那么在 <code>Filter</code> 之后便可以直接转到 <code>Deserialize</code> 进行 <code>DataBlock</code> 的生成（其实并不会出现这种情况，因为如上文所说，如果所有列都在条件语句中，则不会进行 <code>PREWHERE</code> 优化）。 </p>
-<p>另外一个小细节是，<code>FilterColumn</code> 与 <code>ReadDataPrewhere</code> 后的 raw data 需要从 <code>Filter</code> 一直传递到 <code>Deserialize</code>，以便合并与过滤 (这里是否会有不少内存拷贝的开销？C++可以只传指针，Rust的所有权机制应该也会保证性能吧)。</p>
+<p>另外一个小细节是，<code>FilterColumn</code> 与 <code>ReadDataPrewhere</code> 后的 raw data 需要从 <code>Filter</code> 一直传递到 <code>Deserialize</code>，以便合并与过滤 (这里是否会有不少内存拷贝的开销？C++可以只传指针，rustc 和 LLVM 的优化应该也会保证性能吧。但比起 IO 上的开销，内存拷贝的开销应该可以说是微乎其微了)。</p>
 <p>当然，在具体的代码实现中还有很多小细节，这里就不做赘述了。</p>
-<h3 id="性能对比"><a href="#性能对比" class="headerlink" title="性能对比"></a>性能对比</h3><p>TODO</p>
+<h3 id="性能对比"><a href="#性能对比" class="headerlink" title="性能对比"></a>性能对比</h3><p>测试机器相关信息：</p>
+<ul>
+<li>OS: Ubuntu 18.04 LTS (Bionic Beaver)</li>
+<li>Disk: 885G / 1.9T (50%)</li>
+<li>CPU: Intel Xeon Gold 5218R @ 80x 2.924GHz [46.0°C]</li>
+<li>RAM: 8993MiB / 95152MiB</li>
+</ul>
+<p>这里进行了一个简单的性能对比。使用的数据集是 <a href="https://github.com/datafuselabs/databend/blob/main/tests/logictest/suites/ydb/select1-1.test">https://github.com/datafuselabs/databend/blob/main/tests/logictest/suites/ydb/select1-1.test</a> 这里面的插入数据。我将这些数据每五个作为一次插入，并重复插入直至 21828 条数据。这里是为了保证有一定的数据量，并且数据能够打散在不同的 <code>Partition</code> 中。这里使用的 SQL 语句为:</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> t1 <span class="keyword">where</span> a <span class="operator">&lt;</span> <span class="number">174</span> <span class="keyword">and</span> b <span class="operator">&lt;</span> <span class="number">130</span>;</span><br></pre></td></tr></table></figure>
+<p>其中 174 和 130 分别是 a 列和 b 列相对平均的值。我使用了 <code>hyperfine</code> 工具来做简单的 benchmark 测试，预热运行 3 次，正式运行 10 次。测试结果如下：</p>
+<p><code>PREWHER</code> 优化之前:</p>
+<table>
+<thead>
+<tr>
+<th align="right">Mean [ms]</th>
+<th align="right">Min [ms]</th>
+<th align="right">Max [ms]</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="right">856.5 ± 18.5</td>
+<td align="right">837.5</td>
+<td align="right">892.0</td>
+</tr>
+</tbody></table>
+<p><code>PREWHERE</code> 优化之后:</p>
+<table>
+<thead>
+<tr>
+<th align="right">Mean [ms]</th>
+<th align="right">Min [ms]</th>
+<th align="right">Max [ms]</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="right">847.0 ± 12.5</td>
+<td align="right">829.0</td>
+<td align="right">872.3</td>
+</tr>
+</tbody></table>
+<p>可以看到，<code>PREWHERE</code> 优化之后此查询语句的运行速度大概提升了 10ms (1.11%)，并不是特别明显。并且其他语句诸如 <code>select * from t1 where a &lt; 174 and b &gt; 130;</code> 并未见到明显提升，甚至 <code>PREWHERE</code> 之后的结果更逊一筹。这里差别不明显的原因主要有以下几点：</p>
+<ul>
+<li>Databend 在 <code>PREWHERE</code> 优化之前，便会将 <code>Filter</code> 整体下推到 Fuse Engine，用于 <code>Parition</code> 的剪枝，也就是会根据 min-max 等索引信息预先过滤掉一些 <code>Partition</code>。所以对于一些数据或查询语句，<code>PREWHERE</code> 优化之前的性能已经很好了。</li>
+<li>对于一些查询语句，<code>Parition</code> 无法预先被过滤掉。如果一个 <code>Partition</code> 内数据量较大，且不满足 <code>PREWHERE</code> 条件，那么 <code>PREWHERE</code> 优化的提升效果会很明显。后续优化数据读取逻辑之后（并非每次读一个 <code>Partition</code>，而是更加细化），可能会见到比较明显的差别。</li>
+</ul>
+<p>本次性能测试还是比较 naive 的。首先是直接使用的 Debug 产物进行测试，其次是数据集太小，且数据分布不太符合真实场景，之后可以考虑使用 TPC-H 进行测试。</p>
 <h3 id="接下来可以继续做的"><a href="#接下来可以继续做的" class="headerlink" title="接下来可以继续做的"></a>接下来可以继续做的</h3><ul>
 <li>如上文所说，<code>PREWHERE</code> 优化还可以对下推到 Fuse Engine 的 <code>Projection</code> (不是 SQL 的 <code>Projection</code>，是 Fuse Engine 需要返回给上层的数据列) 进行剪枝。</li>
 <li><code>PREWHERE</code> 列的选取还可以结合统计数据进行启发式优化。</li>
@@ -135,6 +180,12 @@
 <li>感谢实验室强大的服务器。</li>
 <li>感谢 VSCode 与 Rust Analyzer。</li>
 </ul>
+<h2 id="CHANGELOG"><a href="#CHANGELOG" class="headerlink" title="CHANGELOG"></a>CHANGELOG</h2><ul>
+<li>2022-09-16 Prewhere 优化修改为将 filter predicates 全部下推。<a href="https://github.com/datafuselabs/databend/pull/7646">https://github.com/datafuselabs/databend/pull/7646</a></li>
+<li>2022-09-11 修复 read rows 统计信息错误。<a href="https://github.com/datafuselabs/databend/pull/7566">https://github.com/datafuselabs/databend/pull/7566</a></li>
+<li>2022-09-09 优化列数据读取流程，减少反序列化次数。<a href="https://github.com/datafuselabs/databend/pull/7551">https://github.com/datafuselabs/databend/pull/7551</a></li>
+<li>2022-08-31 初版实现。<a href="https://github.com/datafuselabs/databend/pull/7340">https://github.com/datafuselabs/databend/pull/7340</a></li>
+</ul>
 
 
 <div class="article-footer reveal fs14"><section id="license"><div class="header"><span>许可协议</span></div><div class="body"><p>本文采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">署名-非商业性使用-相同方式共享 4.0 国际</a> 许可协议，转载请注明出处。</p>
@@ -142,7 +193,7 @@
 
 </article>
 
-<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/2022-winter-summary/">寒假总结<span class="note">较早</span></a><div class="line"></div><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
+<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/2022-winter-summary/">寒假总结<span class="note">较早</span></a><div class="line"></div><a id="prev" href="/databend-sort-optimization/">【WIP】Databend Sort 优化<span class="note">较新</span></a><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
 
 
 

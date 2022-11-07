@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+
+<head>
+  <meta name="generator" content="Hexo 5.4.0">
+  <meta charset="utf-8">
+  
+
+  <meta http-equiv='x-dns-prefetch-control' content='on' />
+  <link rel='dns-prefetch' href='https://cdn.jsdelivr.net'>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+  <meta name="renderer" content="webkit">
+  <meta name="force-rendering" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  <meta name="HandheldFriendly" content="True" >
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#f8f8f8">
+  <title>【WIP】Databend Sort 优化 - リン屋</title>
+
+  
+    <meta name="description" content="最近 Databend 针对数据排序进行了一波性能优化，在此记录一番。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="【WIP】Databend Sort 优化">
+<meta property="og:url" content="https://github.com/RinChanNOWWW/databend-sort-optimization/">
+<meta property="og:site_name" content="リン屋">
+<meta property="og:description" content="最近 Databend 针对数据排序进行了一波性能优化，在此记录一番。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/old-pipeline.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/old-flame.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/new-pipeline.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/heap.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/state-machine.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/new-flame.png">
+<meta property="article:published_time" content="2022-11-05T09:23:42.000Z">
+<meta property="article:modified_time" content="2022-11-05T09:23:42.000Z">
+<meta property="article:author" content="RinChanNOW">
+<meta property="article:tag" content="数据库">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/old-pipeline.png">
+  
+  
+
+  <!-- feed -->
+  
+
+  
+    
+<link rel="stylesheet" href="/css/main.css">
+
+  
+
+  
+
+  
+</head>
+
+<body>
+  
+
+
+  <div class='l_body' id='start'>
+    <aside class='l_left' layout='post'>
+    
+
+
+<header class="header">
+
+<div class="logo-wrap"><a class="avatar" href="/about/"><div class="bg" style="opacity:0;background-image:url(https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.2/avatar/round/rainbow64@3x.webp);"></div><img no-lazy class="avatar" src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/profile/avatar.jpg" onerror="javascript:this.classList.add('error');this.src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/image/2659360.svg';"></a><a class="title" href="/"><div class="main">リン屋</div><div class="sub cap">RinChanNOW's blog</div></a></div>
+<nav class="menu dis-select"><a class="nav-item active" href="/">博客</a><a class="nav-item" href="/about/">关于</a></nav></header>
+
+<div class="widgets">
+
+<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8E%86%E5%8F%B2%E5%AE%9E%E7%8E%B0"><span class="toc-text">历史实现</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90"><span class="toc-text">性能分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BC%98%E5%8C%96%E4%B8%80%EF%BC%9A%E6%B5%81%E5%BC%8F-MergeSort"><span class="toc-text">优化一：流式 MergeSort</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E7%BB%86%E8%8A%82"><span class="toc-text">实现细节</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#DataBlock-Cursor"><span class="toc-text">DataBlock Cursor</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Heap-%E6%93%8D%E4%BD%9C"><span class="toc-text">Heap 操作</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Processor-%E7%8A%B6%E6%80%81%E6%9C%BA"><span class="toc-text">Processor 状态机</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90-1"><span class="toc-text">性能分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BC%98%E5%8C%96%E4%BA%8C%EF%BC%9ARow-Format"><span class="toc-text">优化二：Row Format</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90-2"><span class="toc-text">性能分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%B6%E4%BB%96%E4%BC%98%E5%8C%96%E7%82%B9"><span class="toc-text">其他优化点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%B1%80%E9%99%90%E6%80%A7"><span class="toc-text">局限性</span></a></li></ol></div></div></div>
+
+
+</div>
+
+
+    </aside>
+    <div class='l_main'>
+      
+
+      
+
+
+<div class="bread-nav fs12"><div id="breadcrumb"><a class="cap breadcrumb" href="/">主页</a><span class="sep"></span><a class="cap breadcrumb" href="/">文章</a><span class="sep"></span><a class="cap breadcrumb-link" href="/blog/categories/%E7%BC%96%E7%A8%8B%E5%BC%80%E5%8F%91/">编程开发</a></div><div id="post-meta">发布于&nbsp;<time datetime="2022-11-05T09:23:42.000Z">2022-11-05</time></div></div>
+
+<article class='content md post'>
+<h1 class="article-title"><span>【WIP】Databend Sort 优化</span></h1>
+<p>最近 Databend 针对数据排序进行了一波性能优化，在此记录一番。</p>
+<span id="more"></span>
+
+<p>排序操作在数据库中十分常见与重要。最常见的用法是将数据表按照某几个字段进行排序，或者找出数据表中最大或最小的几行（TopN）。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> <span class="keyword">table</span> <span class="keyword">ORDER</span> <span class="keyword">BY</span> co11, col2; <span class="comment">-- normal sort</span></span><br><span class="line"><span class="keyword">SELECT</span> col <span class="keyword">FROM</span> <span class="keyword">table</span> <span class="keyword">ORDER</span> <span class="keyword">BY</span> col LIMIT n; <span class="comment">-- top n</span></span><br></pre></td></tr></table></figure>
+
+<p>Databend 的 <a target="_blank" rel="noopener" href="https://databend.rs/doc/reference/sql/ddl/clusterkey/dml-recluster-table">RECLUSTER TABLE</a> 命令也与排序息息相关，此命令会将数据表按照 <a target="_blank" rel="noopener" href="https://databend.rs/doc/reference/sql/ddl/clusterkey/">CLUSTER KEY</a> 重新组织，并最终使得底层数据分部遵循 <code>CLUSTER KEY</code> 有序排列。</p>
+<p>排序在数据库中的重要性不言而喻。在优化之前，Databend 的排序实现比较简单，性能表现不太理想，所以需要进行重新设计与优化。</p>
+<h2 id="历史实现"><a href="#历史实现" class="headerlink" title="历史实现"></a>历史实现</h2><p>Databend 曾经的排序实现的十分简单——那就是不断地进行归并排序。</p>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/old-pipeline.png" alt="old-pipeline"></p>
+<p>如图所示，Databend 会为每一个数据源分组建立一条 Partial Sort 流水线，然后通过 Resize 管道将多个流水线合一，然后再进行一次整体的归并排序得到最终的全序数据。</p>
+<h3 id="性能分析"><a href="#性能分析" class="headerlink" title="性能分析"></a>性能分析</h3><p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/old-flame.png" alt="old-flame"></p>
+<p>很容易看出，这种流水线的瓶颈主要在于 MergeSort 阶段（火焰图也印证了这一点）。在实现中，MergeSort 会等待上游数据全部输入才会开始进行归并排序，因为只有这样才能保证数据最终的有序。然而，这种设计的一个最直接的影响就是：MergeSort 阻塞了流水线，下游算子需要等待所有数据块全部堆积在最后一个 MergeSort 并进行归并排序之后才能拿到数据。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="built_in">AVG</span>(col) <span class="keyword">FROM</span> (<span class="keyword">SELECT</span> col <span class="keyword">FROM</span> <span class="keyword">table</span> <span class="keyword">ORDER</span> <span class="keyword">BY</span> col LIMIT n);</span><br></pre></td></tr></table></figure>
+
+<p>设想这样一条 SQL，<code>AVG(col)</code> 需要整个 <code>(SELECT col FROM table ORDER BY col LIMIT n)</code> 执行完毕后才能开始计算，这显然效率是十分低下的。</p>
+<blockquote>
+<p> 题外话：为了缓解排序阻塞带来的影响，Databend 会将 <code>LIMIT</code> 下推到排序阶段，使得归并排序得到目标数量行之后便可以直接输出，这在一定程度上优化了 TopN 。</p>
+</blockquote>
+<p>所以直观的看来，有两个优化方向：第一个是并行化归并排序（见最后一节），第二种是让 MergeSort “流起来“，目前的实现选择了后者。</p>
+<h2 id="优化一：流式-MergeSort"><a href="#优化一：流式-MergeSort" class="headerlink" title="优化一：流式 MergeSort"></a>优化一：流式 MergeSort</h2><p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/new-pipeline.png" alt="new-pipeline"></p>
+<p>如图所示，这里主要的改造是将 Resize 和第二个 MergSort 合并为了一个 MultiMergeSort，而此次优化的重点便是这个 MultiMergeSort。这个算子的主要思想很显而易见，那就是使用堆来进行多路归并。以小根堆为例，若 N 路升序序列都至少有一个元素被 push 入了堆（按照顺序），此时堆顶元素则为全局最小元素。依据这个特性，我们可以在从上游拉取数据并向堆中 push 元素的同时，pop 出堆顶元素输出到下游，使数据”流动“起来，让下游算子不用等到整个序列排序完成后才能开始工作。</p>
+<h3 id="实现细节"><a href="#实现细节" class="headerlink" title="实现细节"></a>实现细节</h3><h4 id="DataBlock-Cursor"><a href="#DataBlock-Cursor" class="headerlink" title="DataBlock Cursor"></a>DataBlock Cursor</h4><p>排序是粒度是行，但是在向量化执行下，算子之间传递的数据自然不会是一行一行的数据，而是一个一个的数据块，一个数据块中包含有多行。所以这里需要引入一个新的数据结构 <code>Cursor</code> 来表示具体的某一行数据。</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">Cursor</span></span> &#123;</span><br><span class="line">    <span class="keyword">pub</span> input_index: <span class="built_in">usize</span>, 	<span class="comment">// Cursor 指向的数据是来自于哪个 input port</span></span><br><span class="line">    <span class="comment">// pub block_index: usize, 	// Cursor 指向的是哪一个 data block。可以省略，因为 heap 中每一个 block 只可能来自于不同的 input port。</span></span><br><span class="line">    <span class="keyword">pub</span> row_index: <span class="built_in">usize</span>, 		<span class="comment">// Cursor 指向的是哪一行</span></span><br><span class="line">    <span class="comment">// other fields</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们每次只用将 <code>Cursor</code> 推入堆中即可。<code>Cursor</code> 间的比较即为对应行排序键之间的比较。</p>
+<h4 id="Heap-操作"><a href="#Heap-操作" class="headerlink" title="Heap 操作"></a>Heap 操作</h4><p>针对堆的操作是整个 MultiMegeSort 的核心，整体算法流程大概为：</p>
+<ol>
+<li>若堆中元素不少于输入数，执行下一步；否则结束此流程。</li>
+<li>弹出堆顶 <code>Cursor</code>，将 <code>Cursor</code> 所指向的行推入待输出队列。</li>
+<li>将 <code>Cursor</code> 指向下一行，若已遍历 block 中所有行，则标记此 input 可以拉取下一个 block 数据；否则，将递增后的 <code>Cursor</code> 放回堆中。</li>
+<li>若待输出队列累计已达要求（limit 或 block_size），则退出此流程准备输出；否则，返回第 1 步。</li>
+</ol>
+<p>对于上述第 2~3 步，有一个可以优化的地方，如下图所示。</p>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/heap.png" alt="heap"></p>
+<p>我们其实不用每次都将 <code>Cursor</code> 回堆，徒增一次 O(log(N)) 的操作。如果递增后的 <code>Cursor</code> 仍然比下一个堆顶元素小，那么我们可以继续将递增后的 <code>Cursor</code> 所指向的行放入输出队列。更加特殊的，如果当前 <code>Cursor</code> 所指向的 block 的最后一行元素都比下一个堆顶元素小，那么可以直接将从当前 <code>Cursor</code> 起此 block 中的所有数据都放入待输出队列。</p>
+<p>通过实验证明，这个小细节会让查询快很多。对于一些比较特殊的语句甚至有 3 倍以上的提升，比如下面这个语句：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> numbers(<span class="number">10000000</span>) <span class="keyword">ORDER</span> <span class="keyword">BY</span> number;</span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> numbers(<span class="number">10000000</span>) <span class="keyword">ORDER</span> <span class="keyword">BY</span> number <span class="keyword">DESC</span>;</span><br></pre></td></tr></table></figure>
+
+<p>因为 <code>numbers</code> 产生的 block 之间没有数据交叉，每个 block 之间本身就具有顺序。</p>
+<p>这整体部分的代码如下。</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span> <span class="keyword">self</span>.heap.len() &gt;= nums_active_inputs &amp;&amp; !need_output &#123;</span><br><span class="line">    <span class="keyword">match</span> <span class="keyword">self</span>.heap.pop() &#123;</span><br><span class="line">        <span class="literal">Some</span>(Reverse(<span class="keyword">mut</span> cursor)) =&gt; &#123;</span><br><span class="line">            <span class="keyword">let</span> input_index = cursor.input_index;</span><br><span class="line">            <span class="keyword">let</span> block_index = <span class="keyword">self</span>.blocks[input_index].len() - <span class="number">1</span>;</span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">self</span>.heap.is_empty() &#123;</span><br><span class="line">                <span class="comment">// If there is no other block in the heap, we can drain the whole block.</span></span><br><span class="line">                <span class="keyword">while</span> !cursor.is_finished() &#123;</span><br><span class="line">                    <span class="keyword">self</span>.in_progess_rows</span><br><span class="line">                    .push((input_index, block_index, cursor.advance()));</span><br><span class="line">                    <span class="keyword">if</span> <span class="keyword">let</span> <span class="literal">Some</span>(limit) = <span class="keyword">self</span>.limit &#123;</span><br><span class="line">                        <span class="keyword">if</span> <span class="keyword">self</span>.in_progess_rows.len() == limit &#123;</span><br><span class="line">                            need_output = <span class="literal">true</span>;</span><br><span class="line">                            <span class="keyword">break</span>;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="comment">// We have read all rows of this block, need to read a new one.</span></span><br><span class="line">                <span class="keyword">self</span>.cursor_finished[input_index] = <span class="literal">true</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">let</span> next_cursor = &amp;<span class="keyword">self</span>.heap.peek().unwrap().<span class="number">0</span>;</span><br><span class="line">                <span class="keyword">while</span> !cursor.is_finished() &amp;&amp; cursor.lt(next_cursor) &#123;</span><br><span class="line">                    <span class="comment">// If the cursor is smaller than the next cursor, don&#x27;t need to push the cursor back to the heap.</span></span><br><span class="line">                    <span class="keyword">self</span>.in_progess_rows</span><br><span class="line">                    .push((input_index, block_index, cursor.advance()));</span><br><span class="line">                    <span class="keyword">if</span> <span class="keyword">let</span> <span class="literal">Some</span>(limit) = <span class="keyword">self</span>.limit &#123;</span><br><span class="line">                        <span class="keyword">if</span> <span class="keyword">self</span>.in_progess_rows.len() == limit &#123;</span><br><span class="line">                            need_output = <span class="literal">true</span>;</span><br><span class="line">                            <span class="keyword">break</span>;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> !cursor.is_finished() &#123;</span><br><span class="line">                    <span class="keyword">self</span>.heap.push(Reverse(cursor));</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="comment">// We have read all rows of this block, need to read a new one.</span></span><br><span class="line">                    <span class="keyword">self</span>.cursor_finished[input_index] = <span class="literal">true</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// Reach the block size, need to output.</span></span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">self</span>.in_progess_rows.len() &gt;= <span class="keyword">self</span>.block_size &#123;</span><br><span class="line">                need_output = <span class="literal">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="literal">None</span> =&gt; &#123;</span><br><span class="line">            <span class="comment">// Special case: self.heap.len() == 0 &amp;&amp; nums_active_inputs == 0.</span></span><br><span class="line">            <span class="comment">// `self.in_progress_rows` cannot be empty.</span></span><br><span class="line">            <span class="comment">// If reach here, it means that all inputs are finished but `self.heap` is not empty before the while loop.</span></span><br><span class="line">            <span class="comment">// Therefore, when reach here, data in `self.heap` is all drained into `self.in_progress_rows`.</span></span><br><span class="line">            <span class="built_in">debug_assert!</span>(!<span class="keyword">self</span>.in_progess_rows.is_empty());</span><br><span class="line">            <span class="keyword">self</span>.state = ProcessorState::Output;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="Processor-状态机"><a href="#Processor-状态机" class="headerlink" title="Processor 状态机"></a>Processor 状态机</h4><p>由于 Databend 的流水线框架基于 Morsel-Driven Parallelism 的，所以需要为每一个 Processor 算子设计一个状态机。这里简单描述一下 MultiMergeSort 的状态机模型。整体状态机大致如下图所示，其中省略了一些边界情况。</p>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/state-machine.png" alt="state-machine"></p>
+<ul>
+<li>Consume: 拉取数据 block，转为 Preserve 状态。</li>
+<li>Preserve: 核心逻辑状态。将 block 推入堆中并执行上一节所示的堆操作流程。若可以进行输出，则转为 Output 状态；否则回到 Consume 状态进行下一波数据拉取。</li>
+<li>Output: 构造输出 block，转为 Generated 状态。</li>
+<li>Generated: 将需要输出的 block 推入 output port。</li>
+</ul>
+<h3 id="性能分析-1"><a href="#性能分析-1" class="headerlink" title="性能分析"></a>性能分析</h3><p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/new-flame.png" alt="new-flame"></p>
+<p>上图是流化 MergeSort 之后（没有进行堆操作优化）的火焰图。可见，性能瓶颈从归并排序转换了堆操作，其中推操作的瓶颈又在于 <code>Cursor</code> 之间的比较运算。所以接下来便引出了本次的第二个优化点：Row Format。</p>
+<h2 id="优化二：Row-Format"><a href="#优化二：Row-Format" class="headerlink" title="优化二：Row Format"></a>优化二：Row Format</h2><p>TODO</p>
+<h3 id="性能分析-2"><a href="#性能分析-2" class="headerlink" title="性能分析"></a>性能分析</h3><p>TODO</p>
+<h2 id="其他优化点"><a href="#其他优化点" class="headerlink" title="其他优化点"></a>其他优化点</h2><ol>
+<li>并行二路归并排序</li>
+</ol>
+<p>DuckDB 使用这种方法来优化二路归并排序。并行二路归并排序的实现来源于论文 <a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1406.2628.pdf">Merge Path - A Visually Intuitive Approach to Parallel Merging</a>，其基本思想是将找到两个有序序列中的排序交叉点，将两个序列按照交叉点分组，使得每个组内的两个数据部分独自归并排序，最后将所有块的结果合并。序列的分组使得每个组的归并排序可以并行执行，不会互相影响，最后直接这便可得到全序结果。</p>
+<p>DuckDB 排序优化博客：<a target="_blank" rel="noopener" href="https://duckdb.org/2021/08/27/external-sorting.html%E3%80%82">https://duckdb.org/2021/08/27/external-sorting.html。</a></p>
+<ol start="2">
+<li>基数排序</li>
+</ol>
+<p>DuckDB 与 ClickHouse 等数据库都引入了基数排序。基数排序是一种<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Sorting_algorithm#Non-comparison_sorts">非比较的基于分布的排序方式</a>，时间复杂度为 O(nk)，其中 k 是排序键的宽度（比如 Int32 的宽度是 4 字节），n 是排序键个数。当 n 很大的时候，基数排序的性能优势就会显现出来。</p>
+<h2 id="局限性"><a href="#局限性" class="headerlink" title="局限性"></a>局限性</h2><p>如果排序键为聚合函数的结果，以目前的实现来说，用于排序的始终就只有一条流水线，无法进行流化多路归并。需要针对这种情况优化流水线。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="built_in">COUNT</span>(<span class="operator">*</span>) <span class="keyword">as</span> c <span class="keyword">FROM</span> <span class="keyword">table</span> <span class="keyword">ORDER</span> <span class="keyword">BY</span> c;</span><br></pre></td></tr></table></figure>
+
+<div class="article-footer reveal fs14"><section id="license"><div class="header"><span>许可协议</span></div><div class="body"><p>本文采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">署名-非商业性使用-相同方式共享 4.0 国际</a> 许可协议，转载请注明出处。</p>
+</div></section></div>
+
+</article>
+
+<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/column-storage-prewhere/">列式存储之PREWHERE优化<span class="note">较早</span></a><div class="line"></div><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
+
+
+
+
+
+
+  <div class='related-wrap md reveal' id="comments">
+    <div class='cmt-title cap theme'>
+      快来参与讨论吧
+    </div>
+    <div class='cmt-body beaudar'>
+      
+
+<svg class="loading" style="vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2709"><path d="M832 512c0-176-144-320-320-320V128c211.2 0 384 172.8 384 384h-64zM192 512c0 176 144 320 320 320v64C300.8 896 128 723.2 128 512h64z" p-id="2710"></path></svg>
+
+<div id="beaudar" repo="RinChanNOWWW/blog-comments" issue-term="pathname" theme="preferred-color-scheme" input-position="top" comment-order="desc" loading="false" branch="main"></div>
+
+    </div>
+  </div>
+
+
+
+      
+<footer class="page-footer reveal fs12"><hr><div class="text"><p>本博客所有文章除特别声明外，均采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> 许可协议，转载请注明出处。</p>
+<p>本站由 <a href="https://github.com/RinChanNOWWW/">@RinChanNOW</a> 创建，使用 <a href="https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0" title="v1.5.0">Stellar</a> 作为主题。</p>
+</div></footer>
+
+      <div class='float-panel mobile-only blur' style='display:none'>
+  <button type='button' class='sidebar-toggle mobile' onclick='sidebar.toggle()'>
+    <svg class="icon" style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="15301"><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 2.3 26.8 24.6 47.5 51.6 47.6h416.5v4z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15302"></path><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 1.9 27.7 23.9 49.7 51.6 51.6h416.5z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15303"></path></svg>
+  </button>
+</div>
+
+    </div>
+  </div>
+  <div class='scripts'>
+    <script type="text/javascript">
+  stellar = {
+    // 懒加载 css https://github.com/filamentgroup/loadCSS
+    loadCSS: (href, before, media, attributes) => {
+      var doc = window.document;
+      var ss = doc.createElement("link");
+      var ref;
+      if (before) {
+        ref = before;
+      } else {
+        var refs = (doc.body || doc.getElementsByTagName("head")[0]).childNodes;
+        ref = refs[refs.length - 1];
+      }
+      var sheets = doc.styleSheets;
+      if (attributes) {
+        for (var attributeName in attributes) {
+          if (attributes.hasOwnProperty(attributeName)) {
+            ss.setAttribute(attributeName, attributes[attributeName]);
+          }
+        }
+      }
+      ss.rel = "stylesheet";
+      ss.href = href;
+      ss.media = "only x";
+      function ready(cb) {
+        if (doc.body) {
+          return cb();
+        }
+        setTimeout(function () {
+          ready(cb);
+        });
+      }
+      ready(function () {
+        ref.parentNode.insertBefore(ss, before ? ref : ref.nextSibling);
+      });
+      var onloadcssdefined = function (cb) {
+        var resolvedHref = ss.href;
+        var i = sheets.length;
+        while (i--) {
+          if (sheets[i].href === resolvedHref) {
+            return cb();
+          }
+        }
+        setTimeout(function () {
+          onloadcssdefined(cb);
+        });
+      };
+      function loadCB() {
+        if (ss.addEventListener) {
+          ss.removeEventListener("load", loadCB);
+        }
+        ss.media = media || "all";
+      }
+      if (ss.addEventListener) {
+        ss.addEventListener("load", loadCB);
+      }
+      ss.onloadcssdefined = onloadcssdefined;
+      onloadcssdefined(loadCB);
+      return ss;
+    },
+
+    // 从 butterfly 和 volantis 获得灵感
+    loadScript: (src, opt) => new Promise((resolve, reject) => {
+      var script = document.createElement('script');
+      script.src = src;
+      if (opt) {
+        for (let key of Object.keys(opt)) {
+          script[key] = opt[key]
+        }
+      } else {
+        // 默认异步，如果需要同步，第二个参数传入 {} 即可
+        script.async = true
+      }
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    }),
+
+    // https://github.com/jerryc127/hexo-theme-butterfly
+    jQuery: (fn) => {
+      if (typeof jQuery === 'undefined') {
+        stellar.loadScript(stellar.plugins.jQuery).then(fn)
+      } else {
+        fn()
+      }
+    }
+  };
+  stellar.github = 'https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0';
+  stellar.config = {
+    date_suffix: {
+      just: '刚刚',
+      min: '分钟前',
+      hour: '小时前',
+      day: '天前',
+      month: '个月前',
+    },
+  };
+
+  // required plugins (only load if needs)
+  stellar.plugins = {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js',
+    sitesjs: '/js/plugins/sites.js',
+    friendsjs: '/js/plugins/friends.js',
+  };
+
+  // optional plugins
+  if ('true' == 'true') {
+    stellar.plugins.lazyload = Object.assign({"enable":true,"js":"https://cdn.jsdelivr.net/npm/vanilla-lazyload@17.3.1/dist/lazyload.min.js","transition":"blur"});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.swiper = Object.assign({"enable":true,"css":"https://unpkg.com/swiper/swiper-bundle.min.css","js":"https://unpkg.com/swiper/swiper-bundle.min.js"});
+  }
+  if ('' == 'true') {
+    stellar.plugins.scrollreveal = Object.assign({"enable":null,"js":"https://cdn.jsdelivr.net/npm/scrollreveal@4.0.9/dist/scrollreveal.min.js","distance":"8px","duration":500,"interval":100,"scale":1});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.preload = Object.assign({"enable":true,"service":"flying_pages","instant_page":"https://cdn.jsdelivr.net/gh/volantis-x/cdn-volantis@4.1.2/js/instant_page.js","flying_pages":"https://cdn.jsdelivr.net/gh/gijo-varghese/flying-pages@2.1.2/flying-pages.min.js"});
+  }
+</script>
+
+<!-- required -->
+
+  
+<script src="/js/main.js" async></script>
+
+
+
+<!-- optional -->
+
+  <script>
+  function loadBeaudar() {
+    const els = document.querySelectorAll("#comments #beaudar");
+    if (els.length === 0) return;
+    els.forEach((el, i) => {
+      try {
+        el.innerHTML = '';
+      } catch (error) {
+        console.log(error);
+      }
+      var script = document.createElement('script');
+      script.src = 'https://beaudar.lipk.org/client.js';
+      script.async = true;
+      for (let key of Object.keys(el.attributes)) {
+        let attr = el.attributes[key];
+        if (['class', 'id'].includes(attr.name) === false) {
+          script.setAttribute(attr.name, attr.value);
+        }
+      }
+      el.appendChild(script);
+    });
+  }
+  window.addEventListener('DOMContentLoaded', (event) => {
+      loadBeaudar();
+  });
+</script>
+
+
+
+
+<!-- inject -->
+
+
+  </div>
+</body>
+</html>
