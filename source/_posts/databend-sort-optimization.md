@@ -1,10 +1,10 @@
 ---
-title: Databend Sort 优化
+title: 【WIP】Databend Sort 优化
 date: 2022-11-05 17:23:42
 tags:
-  - 数据库
+    - 数据库
 categories:
-  - 编程开发
+    - 编程开发
 ---
 
 最近 Databend 针对数据排序进行了一波性能优化，在此记录一番。
@@ -56,15 +56,127 @@ SELECT AVG(col) FROM (SELECT col FROM table ORDER BY col LIMIT n);
 
 #### DataBlock Cursor
 
+排序是粒度是行，但是在向量化执行下，算子之间传递的数据自然不会是一行一行的数据，而是一个一个的数据块，一个数据块中包含有多行。所以这里需要引入一个新的数据结构 `Cursor` 来表示具体的某一行数据。
+
+```rust
+struct Cursor {
+    pub input_index: usize, 	// Cursor 指向的数据是来自于哪个 input port
+    // pub block_index: usize, 	// Cursor 指向的是哪一个 data block。可以省略，因为 heap 中每一个 block 只可能来自于不同的 input port。
+    pub row_index: usize, 		// Cursor 指向的是哪一行
+    // other fields
+}
+```
+
+我们每次只用将 `Cursor` 推入堆中即可。`Cursor` 间的比较即为对应行排序键之间的比较。
+
+#### Heap 操作
+
+针对堆的操作是整个 MultiMegeSort 的核心，整体算法流程大概为：
+
+1. 若堆中元素不少于输入数，执行下一步；否则结束此流程。
+2. 弹出堆顶 `Cursor`，将 `Cursor` 所指向的行推入待输出队列。
+3. 将 `Cursor` 指向下一行，若已遍历 block 中所有行，则标记此 input 可以拉取下一个 block 数据；否则，将递增后的 `Cursor` 放回堆中。
+4. 若待输出队列累计已达要求（limit 或 block_size），则退出此流程准备输出；否则，返回第 1 步。
+
+对于上述第 2~3 步，有一个可以优化的地方，如下图所示。
+
+![heap](https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/heap.png)
+
+我们其实不用每次都将 `Cursor` 回堆，徒增一次 O(log(N)) 的操作。如果递增后的 `Cursor` 仍然比下一个堆顶元素小，那么我们可以继续将递增后的 `Cursor` 所指向的行放入输出队列。更加特殊的，如果当前 `Cursor` 所指向的 block 的最后一行元素都比下一个堆顶元素小，那么可以直接将从当前 `Cursor` 起此 block 中的所有数据都放入待输出队列。
+
+通过实验证明，这个小细节会让查询快很多。对于一些比较特殊的语句甚至有 3 倍以上的提升，比如下面这个语句：
+
+```sql
+SELECT * FROM numbers(10000000) ORDER BY number;
+SELECT * FROM numbers(10000000) ORDER BY number DESC;
+```
+
+因为 `numbers` 产生的 block 之间没有数据交叉，每个 block 之间本身就具有顺序。
+
+这整体部分的代码如下。
+
+```rust
+while self.heap.len() >= nums_active_inputs && !need_output {
+    match self.heap.pop() {
+        Some(Reverse(mut cursor)) => {
+            let input_index = cursor.input_index;
+            let block_index = self.blocks[input_index].len() - 1;
+            if self.heap.is_empty() {
+                // If there is no other block in the heap, we can drain the whole block.
+                while !cursor.is_finished() {
+                    self.in_progess_rows
+                    .push((input_index, block_index, cursor.advance()));
+                    if let Some(limit) = self.limit {
+                        if self.in_progess_rows.len() == limit {
+                            need_output = true;
+                            break;
+                        }
+                    }
+                }
+                // We have read all rows of this block, need to read a new one.
+                self.cursor_finished[input_index] = true;
+            } else {
+                let next_cursor = &self.heap.peek().unwrap().0;
+                while !cursor.is_finished() && cursor.lt(next_cursor) {
+                    // If the cursor is smaller than the next cursor, don't need to push the cursor back to the heap.
+                    self.in_progess_rows
+                    .push((input_index, block_index, cursor.advance()));
+                    if let Some(limit) = self.limit {
+                        if self.in_progess_rows.len() == limit {
+                            need_output = true;
+                            break;
+                        }
+                    }
+                }
+                if !cursor.is_finished() {
+                    self.heap.push(Reverse(cursor));
+                } else {
+                    // We have read all rows of this block, need to read a new one.
+                    self.cursor_finished[input_index] = true;
+                }
+            }
+            // Reach the block size, need to output.
+            if self.in_progess_rows.len() >= self.block_size {
+                need_output = true;
+            }
+        }
+        None => {
+            // Special case: self.heap.len() == 0 && nums_active_inputs == 0.
+            // `self.in_progress_rows` cannot be empty.
+            // If reach here, it means that all inputs are finished but `self.heap` is not empty before the while loop.
+            // Therefore, when reach here, data in `self.heap` is all drained into `self.in_progress_rows`.
+            debug_assert!(!self.in_progess_rows.is_empty());
+            self.state = ProcessorState::Output;
+            break;
+        }
+    }
+}
+```
+
 #### Processor 状态机
 
+由于 Databend 的流水线框架基于 Morsel-Driven Parallelism 的，所以需要为每一个 Processor 算子设计一个状态机。这里简单描述一下 MultiMergeSort 的状态机模型。整体状态机大致如下图所示，其中省略了一些边界情况。
+
+![state-machine](https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/state-machine.png)
+
+- Consume: 拉取数据 block，转为 Preserve 状态。
+- Preserve: 核心逻辑状态。将 block 推入堆中并执行上一节所示的堆操作流程。若可以进行输出，则转为 Output 状态；否则回到 Consume 状态进行下一波数据拉取。
+- Output: 构造输出 block，转为 Generated 状态。
+- Generated: 将需要输出的 block 推入 output port。
+
 ### 性能分析
 
-## 优化二：ROW FORMAT
+![new-flame](https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/new-flame.png)
+
+上图是流化 MergeSort 之后（没有进行堆操作优化）的火焰图。可见，性能瓶颈从归并排序转换了堆操作，其中推操作的瓶颈又在于 `Cursor` 之间的比较运算。所以接下来便引出了本次的第二个优化点：Row Format。
+
+## 优化二：Row Format
+
+TODO
 
 ### 性能分析
 
-
+TODO
 
 ## 其他优化点
 
