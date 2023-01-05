@@ -17,12 +17,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <meta name="theme-color" content="#f8f8f8">
-  <title>【WIP】Databend Sort 优化 - リン屋</title>
+  <title>Databend Sort 优化 - リン屋</title>
 
   
     <meta name="description" content="最近 Databend 针对数据排序进行了一波性能优化，在此记录一番。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="【WIP】Databend Sort 优化">
+<meta property="og:title" content="Databend Sort 优化">
 <meta property="og:url" content="https://github.com/RinChanNOWWW/databend-sort-optimization/">
 <meta property="og:site_name" content="リン屋">
 <meta property="og:description" content="最近 Databend 针对数据排序进行了一波性能优化，在此记录一番。">
@@ -33,6 +33,7 @@
 <meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/heap.png">
 <meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/state-machine.png">
 <meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/new-flame.png">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/row-flame.png">
 <meta property="article:published_time" content="2022-11-05T09:23:42.000Z">
 <meta property="article:modified_time" content="2022-11-05T09:23:42.000Z">
 <meta property="article:author" content="RinChanNOW">
@@ -72,7 +73,7 @@
 
 <div class="widgets">
 
-<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8E%86%E5%8F%B2%E5%AE%9E%E7%8E%B0"><span class="toc-text">历史实现</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90"><span class="toc-text">性能分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BC%98%E5%8C%96%E4%B8%80%EF%BC%9A%E6%B5%81%E5%BC%8F-MergeSort"><span class="toc-text">优化一：流式 MergeSort</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E7%BB%86%E8%8A%82"><span class="toc-text">实现细节</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#DataBlock-Cursor"><span class="toc-text">DataBlock Cursor</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Heap-%E6%93%8D%E4%BD%9C"><span class="toc-text">Heap 操作</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Processor-%E7%8A%B6%E6%80%81%E6%9C%BA"><span class="toc-text">Processor 状态机</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90-1"><span class="toc-text">性能分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BC%98%E5%8C%96%E4%BA%8C%EF%BC%9ARow-Format"><span class="toc-text">优化二：Row Format</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90-2"><span class="toc-text">性能分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%B6%E4%BB%96%E4%BC%98%E5%8C%96%E7%82%B9"><span class="toc-text">其他优化点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%B1%80%E9%99%90%E6%80%A7"><span class="toc-text">局限性</span></a></li></ol></div></div></div>
+<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8E%86%E5%8F%B2%E5%AE%9E%E7%8E%B0"><span class="toc-text">历史实现</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90"><span class="toc-text">性能分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BC%98%E5%8C%96%E4%B8%80%EF%BC%9A%E6%B5%81%E5%BC%8F-MergeSort"><span class="toc-text">优化一：流式 MergeSort</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E7%BB%86%E8%8A%82"><span class="toc-text">实现细节</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#DataBlock-Cursor"><span class="toc-text">DataBlock Cursor</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Heap-%E6%93%8D%E4%BD%9C"><span class="toc-text">Heap 操作</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Processor-%E7%8A%B6%E6%80%81%E6%9C%BA"><span class="toc-text">Processor 状态机</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90-1"><span class="toc-text">性能分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BC%98%E5%8C%96%E4%BA%8C%EF%BC%9ARow-Format"><span class="toc-text">优化二：Row Format</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E7%BB%86%E8%8A%82-1"><span class="toc-text">实现细节</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E9%80%9A%E7%94%A8%E9%80%BB%E8%BE%91"><span class="toc-text">通用逻辑</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%97%A0%E7%AC%A6%E5%8F%B7%E6%95%B4%E6%95%B0"><span class="toc-text">无符号整数</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%9C%89%E7%AC%A6%E5%8F%B7%E6%95%B4%E6%95%B0"><span class="toc-text">有符号整数</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%B5%AE%E7%82%B9%E6%95%B0"><span class="toc-text">浮点数</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%8F%98%E9%95%BF%E7%B1%BB%E5%9E%8B%EF%BC%88%E5%AD%97%E7%AC%A6%E4%B8%B2%EF%BC%8C%E5%AD%97%E7%AC%A6%E6%95%B0%E7%BB%84%EF%BC%89"><span class="toc-text">变长类型（字符串，字符数组）</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%AD%97%E5%85%B8%E7%B1%BB%E5%9E%8B"><span class="toc-text">字典类型</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90-2"><span class="toc-text">性能分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9C%80%E7%BB%88%E4%BC%98%E5%8C%96%E7%BB%93%E6%9E%9C"><span class="toc-text">最终优化结果</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%B6%E4%BB%96%E4%BC%98%E5%8C%96%E7%82%B9"><span class="toc-text">其他优化点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%B1%80%E9%99%90%E6%80%A7"><span class="toc-text">局限性</span></a></li></ol></div></div></div>
 
 
 </div>
@@ -88,7 +89,7 @@
 <div class="bread-nav fs12"><div id="breadcrumb"><a class="cap breadcrumb" href="/">主页</a><span class="sep"></span><a class="cap breadcrumb" href="/">文章</a><span class="sep"></span><a class="cap breadcrumb-link" href="/blog/categories/%E7%BC%96%E7%A8%8B%E5%BC%80%E5%8F%91/">编程开发</a></div><div id="post-meta">发布于&nbsp;<time datetime="2022-11-05T09:23:42.000Z">2022-11-05</time></div></div>
 
 <article class='content md post'>
-<h1 class="article-title"><span>【WIP】Databend Sort 优化</span></h1>
+<h1 class="article-title"><span>Databend Sort 优化</span></h1>
 <p>最近 Databend 针对数据排序进行了一波性能优化，在此记录一番。</p>
 <span id="more"></span>
 
@@ -130,7 +131,7 @@
 
 <p>因为 <code>numbers</code> 产生的 block 之间没有数据交叉，每个 block 之间本身就具有顺序。</p>
 <p>这整体部分的代码如下。</p>
-<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span> <span class="keyword">self</span>.heap.len() &gt;= nums_active_inputs &amp;&amp; !need_output &#123;</span><br><span class="line">    <span class="keyword">match</span> <span class="keyword">self</span>.heap.pop() &#123;</span><br><span class="line">        <span class="literal">Some</span>(Reverse(<span class="keyword">mut</span> cursor)) =&gt; &#123;</span><br><span class="line">            <span class="keyword">let</span> input_index = cursor.input_index;</span><br><span class="line">            <span class="keyword">let</span> block_index = <span class="keyword">self</span>.blocks[input_index].len() - <span class="number">1</span>;</span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">self</span>.heap.is_empty() &#123;</span><br><span class="line">                <span class="comment">// If there is no other block in the heap, we can drain the whole block.</span></span><br><span class="line">                <span class="keyword">while</span> !cursor.is_finished() &#123;</span><br><span class="line">                    <span class="keyword">self</span>.in_progess_rows</span><br><span class="line">                    .push((input_index, block_index, cursor.advance()));</span><br><span class="line">                    <span class="keyword">if</span> <span class="keyword">let</span> <span class="literal">Some</span>(limit) = <span class="keyword">self</span>.limit &#123;</span><br><span class="line">                        <span class="keyword">if</span> <span class="keyword">self</span>.in_progess_rows.len() == limit &#123;</span><br><span class="line">                            need_output = <span class="literal">true</span>;</span><br><span class="line">                            <span class="keyword">break</span>;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="comment">// We have read all rows of this block, need to read a new one.</span></span><br><span class="line">                <span class="keyword">self</span>.cursor_finished[input_index] = <span class="literal">true</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">let</span> next_cursor = &amp;<span class="keyword">self</span>.heap.peek().unwrap().<span class="number">0</span>;</span><br><span class="line">                <span class="keyword">while</span> !cursor.is_finished() &amp;&amp; cursor.lt(next_cursor) &#123;</span><br><span class="line">                    <span class="comment">// If the cursor is smaller than the next cursor, don&#x27;t need to push the cursor back to the heap.</span></span><br><span class="line">                    <span class="keyword">self</span>.in_progess_rows</span><br><span class="line">                    .push((input_index, block_index, cursor.advance()));</span><br><span class="line">                    <span class="keyword">if</span> <span class="keyword">let</span> <span class="literal">Some</span>(limit) = <span class="keyword">self</span>.limit &#123;</span><br><span class="line">                        <span class="keyword">if</span> <span class="keyword">self</span>.in_progess_rows.len() == limit &#123;</span><br><span class="line">                            need_output = <span class="literal">true</span>;</span><br><span class="line">                            <span class="keyword">break</span>;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> !cursor.is_finished() &#123;</span><br><span class="line">                    <span class="keyword">self</span>.heap.push(Reverse(cursor));</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="comment">// We have read all rows of this block, need to read a new one.</span></span><br><span class="line">                    <span class="keyword">self</span>.cursor_finished[input_index] = <span class="literal">true</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// Reach the block size, need to output.</span></span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">self</span>.in_progess_rows.len() &gt;= <span class="keyword">self</span>.block_size &#123;</span><br><span class="line">                need_output = <span class="literal">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="literal">None</span> =&gt; &#123;</span><br><span class="line">            <span class="comment">// Special case: self.heap.len() == 0 &amp;&amp; nums_active_inputs == 0.</span></span><br><span class="line">            <span class="comment">// `self.in_progress_rows` cannot be empty.</span></span><br><span class="line">            <span class="comment">// If reach here, it means that all inputs are finished but `self.heap` is not empty before the while loop.</span></span><br><span class="line">            <span class="comment">// Therefore, when reach here, data in `self.heap` is all drained into `self.in_progress_rows`.</span></span><br><span class="line">            <span class="built_in">debug_assert!</span>(!<span class="keyword">self</span>.in_progess_rows.is_empty());</span><br><span class="line">            <span class="keyword">self</span>.state = ProcessorState::Output;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span> <span class="keyword">self</span>.heap.len() &gt;= nums_active_inputs &amp;&amp; !need_output &#123;</span><br><span class="line">    <span class="keyword">match</span> <span class="keyword">self</span>.heap.pop() &#123;</span><br><span class="line">        <span class="literal">Some</span>(Reverse(<span class="keyword">mut</span> cursor)) =&gt; &#123;</span><br><span class="line">            <span class="keyword">let</span> input_index = cursor.input_index;</span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">self</span>.heap.is_empty() &#123;</span><br><span class="line">                <span class="comment">// If there is no other block in the heap, we can drain the whole block.</span></span><br><span class="line">                need_output = <span class="keyword">self</span>.drain_cursor(cursor);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">let</span> next_cursor = &amp;<span class="keyword">self</span>.heap.peek().unwrap().<span class="number">0</span>;</span><br><span class="line">                <span class="comment">// If the last row of current block is smaller than the next cursor,</span></span><br><span class="line">                <span class="comment">// we can drain the whole block.</span></span><br><span class="line">                <span class="keyword">if</span> cursor.last().le(&amp;next_cursor.current()) &#123;</span><br><span class="line">                    need_output = <span class="keyword">self</span>.drain_cursor(cursor);</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="keyword">let</span> block_index = <span class="keyword">self</span>.blocks[input_index].len() - <span class="number">1</span>;</span><br><span class="line">                    <span class="keyword">while</span> !cursor.is_finished() &amp;&amp; cursor.le(next_cursor) &#123;</span><br><span class="line">                        <span class="comment">// If the cursor is smaller than the next cursor, don&#x27;t need to push the cursor back to the heap.</span></span><br><span class="line">                        <span class="keyword">self</span>.in_progess_rows.push((</span><br><span class="line">                            input_index,</span><br><span class="line">                            block_index,</span><br><span class="line">                            cursor.advance(),</span><br><span class="line">                        ));</span><br><span class="line">                        <span class="keyword">if</span> <span class="keyword">let</span> <span class="literal">Some</span>(limit) = <span class="keyword">self</span>.limit &#123;</span><br><span class="line">                            <span class="keyword">if</span> <span class="keyword">self</span>.in_progess_rows.len() == limit &#123;</span><br><span class="line">                                need_output = <span class="literal">true</span>;</span><br><span class="line">                                <span class="keyword">break</span>;</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">if</span> !cursor.is_finished() &#123;</span><br><span class="line">                        <span class="keyword">self</span>.heap.push(Reverse(cursor));</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        <span class="comment">// We have read all rows of this block, need to read a new one.</span></span><br><span class="line">                        <span class="keyword">self</span>.cursor_finished[input_index] = <span class="literal">true</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// Reach the block size, need to output.</span></span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">self</span>.in_progess_rows.len() &gt;= <span class="keyword">self</span>.block_size &#123;</span><br><span class="line">                need_output = <span class="literal">true</span>;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">self</span>.cursor_finished[input_index] &amp;&amp; !<span class="keyword">self</span>.input_finished[input_index] &#123;</span><br><span class="line">                <span class="comment">// Correctness: if input is not finished, we need to pull more data,</span></span><br><span class="line">                <span class="comment">// or we can continue this loop.</span></span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="literal">None</span> =&gt; &#123;</span><br><span class="line">            <span class="comment">// Special case: self.heap.len() == 0 &amp;&amp; nums_active_inputs == 0.</span></span><br><span class="line">            <span class="comment">// `self.in_progress_rows` cannot be empty.</span></span><br><span class="line">            <span class="comment">// If reach here, it means that all inputs are finished but `self.heap` is not empty before the while loop.</span></span><br><span class="line">            <span class="comment">// Therefore, when reach here, data in `self.heap` is all drained into `self.in_progress_rows`.</span></span><br><span class="line">            <span class="built_in">debug_assert!</span>(!<span class="keyword">self</span>.in_progess_rows.is_empty());</span><br><span class="line">            <span class="keyword">self</span>.state = ProcessorState::Output;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <h4 id="Processor-状态机"><a href="#Processor-状态机" class="headerlink" title="Processor 状态机"></a>Processor 状态机</h4><p>由于 Databend 的流水线框架基于 Morsel-Driven Parallelism 的，所以需要为每一个 Processor 算子设计一个状态机。这里简单描述一下 MultiMergeSort 的状态机模型。整体状态机大致如下图所示，其中省略了一些边界情况。</p>
 <p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/state-machine.png" alt="state-machine"></p>
@@ -142,8 +143,304 @@
 </ul>
 <h3 id="性能分析-1"><a href="#性能分析-1" class="headerlink" title="性能分析"></a>性能分析</h3><p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/new-flame.png" alt="new-flame"></p>
 <p>上图是流化 MergeSort 之后（没有进行堆操作优化）的火焰图。可见，性能瓶颈从归并排序转换了堆操作，其中推操作的瓶颈又在于 <code>Cursor</code> 之间的比较运算。所以接下来便引出了本次的第二个优化点：Row Format。</p>
-<h2 id="优化二：Row-Format"><a href="#优化二：Row-Format" class="headerlink" title="优化二：Row Format"></a>优化二：Row Format</h2><p>TODO</p>
-<h3 id="性能分析-2"><a href="#性能分析-2" class="headerlink" title="性能分析"></a>性能分析</h3><p>TODO</p>
+<h2 id="优化二：Row-Format"><a href="#优化二：Row-Format" class="headerlink" title="优化二：Row Format"></a>优化二：Row Format</h2><p>在堆操作中需要对不同行的排序键进行比较运算。Databend 基于 arrow2 来做的内存列式存储与计算，在比较两列中某一行数据时，需要先调用 <code>build_compare</code> 为两列建立比较函数，然后再调用比较函数得到两列中指定两行的比较结果。由于 <code>build_compare</code> 所得到的函数会根据待比较两列的类型进行动态分发（虚函数），并且需要在堆内存进行随机寻址，所以效率十分低下（从上面的火焰图也可以看出）。</p>
+<p>因此，我们想要消除 <code>build_comapre</code> 以及列内随机查询带来的开销。如果 <code>Cursor</code> 可以直接相比，而不是会间接进行一层函数调用就好了——这就是内存 Row 结构产生的契机。除了排序计算，Row 结构在 Join 运算中也会带来性能上的提升，不过这是后话了。</p>
+<p>这里的需求就是：将列数据转换为一种可以直接用来比较的行数据。正好前不久，<a href="https://github.com/apache/arrow-rs/pull/2593">Apache Arrow</a> 引入了一种专门用于比较运算的 Row Format，并将其用在了 <a href="https://github.com/apache/arrow-datafusion/pull/3386">arrow-datafusion</a> 并为排序带来了 50% ~ 70% 的性能提升，于是我便将其移植到了 <a href="">arrow2</a> 中以供 Databend 使用。</p>
+<h3 id="实现细节-1"><a href="#实现细节-1" class="headerlink" title="实现细节"></a>实现细节</h3><p>整体的实现细节可参见 <a target="_blank" rel="noopener" href="https://arrow.apache.org/blog/2022/11/07/multi-column-sorts-in-arrow-rust-part-2/">arrow 的博客</a>。我在这里进行一些重要类型的说明。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">┌─────┐   ┌─────┐   ┌─────┐</span><br><span class="line">│     │   │     │   │     │</span><br><span class="line">├─────┤ ┌ ┼─────┼ ─ ┼─────┼ ┐              ┏━━━━━━━━━━━━━┓</span><br><span class="line">│     │   │     │   │     │  ─────────────▶┃             ┃</span><br><span class="line">├─────┤ └ ┼─────┼ ─ ┼─────┼ ┘              ┗━━━━━━━━━━━━━┛</span><br><span class="line">│     │   │     │   │     │</span><br><span class="line">└─────┘   └─────┘   └─────┘</span><br><span class="line">            ...</span><br><span class="line">┌─────┐ ┌ ┬─────┬ ─ ┬─────┬ ┐              ┏━━━━━━━━┓</span><br><span class="line">│     │   │     │   │     │  ─────────────▶┃        ┃</span><br><span class="line">└─────┘ └ ┴─────┴ ─ ┴─────┴ ┘              ┗━━━━━━━━┛</span><br><span class="line">Customer    State    Orders</span><br><span class="line"> UInt64      Utf8     F64</span><br><span class="line"></span><br><span class="line">       Input Arrays                          Row Format</span><br><span class="line">        (Columns)</span><br></pre></td></tr></table></figure>
+
+<h4 id="通用逻辑"><a href="#通用逻辑" class="headerlink" title="通用逻辑"></a>通用逻辑</h4><ul>
+<li><p>整个行数据编码由各个排序键编码依次连接而成。</p>
+</li>
+<li><p>所有类型的数据的第一个字节都是用来表示是否为 NULL。若为 NULL，只占一个字节。</p>
+<ul>
+<li>若不为 NULL，此字节为 0x01（一般情况，变长类型可能为 0x02）。</li>
+<li>若排序选项 null first 为 true，NULL 字节为 0x00。</li>
+<li>若排序选项 null first 为 false，NULL 字节为 0xFF。</li>
+</ul>
+</li>
+<li><p>如果排序选项为降序排序，则将整个数据按位反转。</p>
+</li>
+<li><p>行的比较即为底层二进制数据的 <code>memcmp</code> 比较，即：依次比较二进制位，碰到第一个不同二进制数是便可得出结果。</p>
+</li>
+</ul>
+<h4 id="无符号整数"><a href="#无符号整数" class="headerlink" title="无符号整数"></a>无符号整数</h4><p>按照大端方式编码。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">             ┌──┬──┬──┬──┐      ┌──┬──┬──┬──┬──┐</span><br><span class="line">  3          │03│00│00│00│      │01│00│00│00│03│</span><br><span class="line">             └──┴──┴──┴──┘      └──┴──┴──┴──┴──┘</span><br><span class="line">             ┌──┬──┬──┬──┐      ┌──┬──┬──┬──┬──┐</span><br><span class="line"> 258         │02│01│00│00│      │01│00│00│01│02│</span><br><span class="line">             └──┴──┴──┴──┘      └──┴──┴──┴──┴──┘</span><br><span class="line">             ┌──┬──┬──┬──┐      ┌──┬──┬──┬──┬──┐</span><br><span class="line">23423        │7F│5B│00│00│      │01│00│00│5B│7F│</span><br><span class="line">             └──┴──┴──┴──┘      └──┴──┴──┴──┴──┘</span><br><span class="line">             ┌──┬──┬──┬──┐      ┌──┬──┬──┬──┬──┐</span><br><span class="line">NULL         │??│??│??│??│      │00│00│00│00│00│</span><br><span class="line">             └──┴──┴──┴──┘      └──┴──┴──┴──┴──┘</span><br><span class="line"></span><br><span class="line">            32-bit (4 bytes)        Row Format</span><br><span class="line">Value        Little Endian</span><br></pre></td></tr></table></figure>
+
+<h4 id="有符号整数"><a href="#有符号整数" class="headerlink" title="有符号整数"></a>有符号整数</h4><p>按照补码编码。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">      ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┬──┐</span><br><span class="line">   5  │05│00│00│00│       │05│00│00│80│       │01│80│00│00│05│</span><br><span class="line">      └──┴──┴──┴──┘       └──┴──┴──┴──┘       └──┴──┴──┴──┴──┘</span><br><span class="line">      ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┐       ┌──┬──┬──┬──┬──┐</span><br><span class="line">  -5  │FB│FF│FF│FF│       │FB│FF│FF│7F│       │01│7F│FF│FF│FB│</span><br><span class="line">      └──┴──┴──┴──┘       └──┴──┴──┴──┘       └──┴──┴──┴──┴──┘</span><br><span class="line"></span><br><span class="line">Value  32-bit (4 bytes)    High bit flipped      Row Format</span><br><span class="line">        Little Endian</span><br></pre></td></tr></table></figure>
+
+<h4 id="浮点数"><a href="#浮点数" class="headerlink" title="浮点数"></a>浮点数</h4><p>按照 IEEE 754。</p>
+<h4 id="变长类型（字符串，字符数组）"><a href="#变长类型（字符串，字符数组）" class="headerlink" title="变长类型（字符串，字符数组）"></a>变长类型（字符串，字符数组）</h4><p>基本思想：<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Consistent_Overhead_Byte_Stuffing">COBS 编码</a>。</p>
+<p>NULL 用 0x00 表示，空串用 0x01 表示，非空串用 0x02 打头（使得非空串一定比空串大）。变长类型的数据长度被设计为 32 的整数倍，即：未满 32 字节用 0 填充到 32字节（选择 32 是因为 AVX-256 一次可拷贝 32 字节）。每 32 字节最后用 0xFF 结束，除了最后一块，最后一块用该块的数据长度来结束。下面用 4 字节代替 32 字节来演示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">                      ┌───┬───┬───┬───┬───┬───┐</span><br><span class="line"> &quot;MEEP&quot;               │02 │&#x27;M&#x27;│&#x27;E&#x27;│&#x27;E&#x27;│&#x27;P&#x27;│04 │</span><br><span class="line">                      └───┴───┴───┴───┴───┴───┘</span><br><span class="line"></span><br><span class="line">                      ┌───┐</span><br><span class="line"> &quot;&quot;                   │01 |</span><br><span class="line">                      └───┘</span><br><span class="line"></span><br><span class="line"> NULL                 ┌───┐</span><br><span class="line">                      │00 │</span><br><span class="line">                      └───┘</span><br><span class="line"></span><br><span class="line">&quot;Defenestration&quot;      ┌───┬───┬───┬───┬───┬───┐</span><br><span class="line">                      │02 │&#x27;D&#x27;│&#x27;e&#x27;│&#x27;f&#x27;│&#x27;e&#x27;│FF │</span><br><span class="line">                      └───┼───┼───┼───┼───┼───┤</span><br><span class="line">                          │&#x27;n&#x27;│&#x27;e&#x27;│&#x27;s&#x27;│&#x27;t&#x27;│FF │</span><br><span class="line">                          ├───┼───┼───┼───┼───┤</span><br><span class="line">                          │&#x27;r&#x27;│&#x27;a&#x27;│&#x27;t&#x27;│&#x27;r&#x27;│FF │</span><br><span class="line">                          ├───┼───┼───┼───┼───┤</span><br><span class="line">                          │&#x27;a&#x27;│&#x27;t&#x27;│&#x27;i&#x27;│&#x27;o&#x27;│FF │</span><br><span class="line">                          ├───┼───┼───┼───┼───┤</span><br><span class="line">                          │&#x27;n&#x27;│00 │00 │00 │ 1 │</span><br><span class="line">                          └───┴───┴───┴───┴───┘</span><br></pre></td></tr></table></figure>
+
+<p>分块这种设计让变长类型转换为了定长类型，能够解决有多个排序键时可能引入的问题。如果直接按照变长类型本身进行编码，考虑下面这一种场景，其中有两个排序键都为变长类型，且他们的编码都如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">┌───┬───┬───┬───┬───┬───┐</span><br><span class="line">│02 │ 01│ 02│ 02│ 01│ 01│</span><br><span class="line">└───┴───┴───┴───┴───┴───┘</span><br><span class="line">ckey 1: 02 01, 02 02 01 01</span><br><span class="line">ckey 2: 02 01 02, 02 01 01</span><br></pre></td></tr></table></figure>
+
+<p>由于 ckey1 的第一个 key 比 ckey2 的第一个 key 小，最后的结果应该是 ckey1 &lt; ckey2，然而按照这种 encoding 方式结果却是相等！只要不按照定长划分，当存在多个排序键时都可能存在问题。</p>
+<p>而上述分块的编码方式一定可以在当前排序键的范围内得出比较结果（显而易见）。</p>
+<h4 id="字典类型"><a href="#字典类型" class="headerlink" title="字典类型"></a>字典类型</h4><p>字典类型是 Arrow 中一种用来保存低基数数据的类型，在 Databend 中似乎没有使用，这里不做过多介绍。想了解的话请到博客原文中查看。</p>
+<h3 id="性能分析-2"><a href="#性能分析-2" class="headerlink" title="性能分析"></a>性能分析</h3><p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/databend-sort-optimization/row-flame.png" alt="row-flame"></p>
+<p>和上一节的火焰图相比，可以看出，比较操作的占比大幅度减小，比较还用上了 avx2 向量化指令集进行 <code>memcmp</code> 的比较。</p>
+<h2 id="最终优化结果"><a href="#最终优化结果" class="headerlink" title="最终优化结果"></a>最终优化结果</h2><p>可见，经过以上的优化，使得排序运算得到了不小的提升。</p>
+<p>另外，对 hits 表（1亿行数据） 的 <code>RECLUSTER</code> 操作也不会 OOM 了（内存维持在 10G 以内）。</p>
+<table>
+<thead>
+<tr>
+<th align="center">sort</th>
+<th align="center"></th>
+<th align="center"></th>
+<th align="center"></th>
+<th align="center"></th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">ID</td>
+<td align="center">new</td>
+<td align="center">old</td>
+<td align="center">old / new</td>
+<td align="center">SQL</td>
+</tr>
+<tr>
+<td align="center">1</td>
+<td align="center">0.49185555</td>
+<td align="center">1.58862891</td>
+<td align="center">3.22986883</td>
+<td align="center">select * from numbers(10000000) order by number;</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">0.49170787</td>
+<td align="center">1.64183498</td>
+<td align="center">3.33904556</td>
+<td align="center">select * from numbers(10000000) order by number desc;</td>
+</tr>
+<tr>
+<td align="center">3</td>
+<td align="center">0.09856892</td>
+<td align="center">0.26789701</td>
+<td align="center">2.717864921</td>
+<td align="center">select userid, flashmajor from hits order by flashmajor, userid desc;</td>
+</tr>
+<tr>
+<td align="center">4</td>
+<td align="center">0.06503526</td>
+<td align="center">0.1700541</td>
+<td align="center">2.614798495</td>
+<td align="center">select resolutiondepth from hits order by resolutiondepth;</td>
+</tr>
+<tr>
+<td align="center">5</td>
+<td align="center">0.27688674</td>
+<td align="center">0.35350362</td>
+<td align="center">1.276708375</td>
+<td align="center">select title from hits order by title;</td>
+</tr>
+<tr>
+<td align="center">6</td>
+<td align="center">0.29328114</td>
+<td align="center">0.34813435</td>
+<td align="center">1.187032859</td>
+<td align="center">select title from hits order by title desc;</td>
+</tr>
+<tr>
+<td align="center">7</td>
+<td align="center">0.30203853</td>
+<td align="center">0.46025009</td>
+<td align="center">1.523812508</td>
+<td align="center">select userid, title from hits order by userid, title;</td>
+</tr>
+<tr>
+<td align="center">8</td>
+<td align="center">0.29694118</td>
+<td align="center">0.47894412</td>
+<td align="center">1.6129259</td>
+<td align="center">select userid, title from hits order by userid desc, title;</td>
+</tr>
+<tr>
+<td align="center">9</td>
+<td align="center">0.29833156</td>
+<td align="center">0.46893471</td>
+<td align="center">1.571857533</td>
+<td align="center">select userid, title from hits order by userid, title desc;</td>
+</tr>
+<tr>
+<td align="center">10</td>
+<td align="center">0.29689456</td>
+<td align="center">0.39771965</td>
+<td align="center">1.339598981</td>
+<td align="center">select userid, title from hits order by userid desc, title desc;</td>
+</tr>
+<tr>
+<td align="center"><strong>top100</strong></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center">ID</td>
+<td align="center">new</td>
+<td align="center">old</td>
+<td align="center">old / new</td>
+<td align="center">SQL</td>
+</tr>
+<tr>
+<td align="center">1</td>
+<td align="center">0.02551741</td>
+<td align="center">0.02539468</td>
+<td align="center">0.995190343</td>
+<td align="center">select * from numbers(10000000) order by number limit 100;</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">0.02533295</td>
+<td align="center">0.02419826</td>
+<td align="center">0.955208928</td>
+<td align="center">select * from numbers(10000000) order by number desc limit 100;</td>
+</tr>
+<tr>
+<td align="center">3</td>
+<td align="center">0.06810979</td>
+<td align="center">0.27476401</td>
+<td align="center">4.034133859</td>
+<td align="center">select userid, flashmajor from hits order by flashmajor, userid desc limit 100;</td>
+</tr>
+<tr>
+<td align="center">4</td>
+<td align="center">0.06037709</td>
+<td align="center">0.17488738</td>
+<td align="center">2.896585112</td>
+<td align="center">select resolutiondepth from hits order by resolutiondepth limit 100;</td>
+</tr>
+<tr>
+<td align="center">5</td>
+<td align="center">0.12315882</td>
+<td align="center">0.1646738</td>
+<td align="center">1.337084912</td>
+<td align="center">select title from hits order by title limit 100;</td>
+</tr>
+<tr>
+<td align="center">6</td>
+<td align="center">0.12697252</td>
+<td align="center">0.17209053</td>
+<td align="center">1.355336808</td>
+<td align="center">select title from hits order by title desc limit 100;</td>
+</tr>
+<tr>
+<td align="center">7</td>
+<td align="center">0.12341952</td>
+<td align="center">0.24537162</td>
+<td align="center">1.988110309</td>
+<td align="center">select userid, title from hits order by userid, title limit 100;</td>
+</tr>
+<tr>
+<td align="center">8</td>
+<td align="center">0.12241615</td>
+<td align="center">0.28931403</td>
+<td align="center">2.363364883</td>
+<td align="center">select userid, title from hits order by userid desc, title limit 100;</td>
+</tr>
+<tr>
+<td align="center">9</td>
+<td align="center">0.12456732</td>
+<td align="center">0.2316427</td>
+<td align="center">1.859578419</td>
+<td align="center">select userid, title from hits order by userid, title desc limit 100;</td>
+</tr>
+<tr>
+<td align="center">10</td>
+<td align="center">0.12659582</td>
+<td align="center">0.25043391</td>
+<td align="center">1.978216263</td>
+<td align="center">select userid, title from hits order by userid desc, title desc limit 100;</td>
+</tr>
+<tr>
+<td align="center"><strong>aggregation with sort</strong></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="center">ID</td>
+<td align="center">new</td>
+<td align="center">old</td>
+<td align="center">old / new</td>
+<td align="center">SQL</td>
+</tr>
+<tr>
+<td align="center">1</td>
+<td align="center">0.05681156</td>
+<td align="center">0.16286981</td>
+<td align="center">2.866842769</td>
+<td align="center">select avg(fetchtiming) from (select * from hits order by fetchtiming desc limit 100);</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">0.05609226</td>
+<td align="center">0.17959318</td>
+<td align="center">3.201746195</td>
+<td align="center">select avg(fetchtiming) from (select * from hits order by fetchtiming desc limit 1000);</td>
+</tr>
+<tr>
+<td align="center">3</td>
+<td align="center">0.05605486</td>
+<td align="center">0.17966659</td>
+<td align="center">3.205192021</td>
+<td align="center">select avg(fetchtiming) from (select * from hits order by fetchtiming desc limit 10000);</td>
+</tr>
+<tr>
+<td align="center">4</td>
+<td align="center">0.05836755</td>
+<td align="center">0.17961846</td>
+<td align="center">3.077368504</td>
+<td align="center">select avg(fetchtiming) from (select * from hits order by fetchtiming desc limit 50000);</td>
+</tr>
+<tr>
+<td align="center">5</td>
+<td align="center">0.06108108</td>
+<td align="center">0.18346159</td>
+<td align="center">3.003574757</td>
+<td align="center">select avg(fetchtiming) from (select * from hits order by fetchtiming desc limit 90000);</td>
+</tr>
+<tr>
+<td align="center">6</td>
+<td align="center">0.06054325</td>
+<td align="center">0.16922857</td>
+<td align="center">2.795168247</td>
+<td align="center">select avg(sendtiming) from (select * from hits order by sendtiming desc limit 50000);</td>
+</tr>
+<tr>
+<td align="center">7</td>
+<td align="center">0.06047222</td>
+<td align="center">0.18473938</td>
+<td align="center">3.054946222</td>
+<td align="center">select avg(dnstiming) from (select * from hits order by dnstiming desc limit 50000);</td>
+</tr>
+<tr>
+<td align="center">8</td>
+<td align="center">0.06025029</td>
+<td align="center">0.19324225</td>
+<td align="center">3.207324811</td>
+<td align="center">select avg(connecttiming) from (select * from hits order by connecttiming desc limit 50000);</td>
+</tr>
+<tr>
+<td align="center">9</td>
+<td align="center">0.06222921</td>
+<td align="center">0.17401594</td>
+<td align="center">2.796370708</td>
+<td align="center">select avg(responsestarttiming) from (select * from hits order by responsestarttiming desc limit 50000);</td>
+</tr>
+<tr>
+<td align="center">10</td>
+<td align="center">0.06191917</td>
+<td align="center">0.16554495</td>
+<td align="center">2.673565392</td>
+<td align="center">select avg(responseendtiming) from (select * from hits order by responseendtiming desc limit 50000);</td>
+</tr>
+</tbody></table>
 <h2 id="其他优化点"><a href="#其他优化点" class="headerlink" title="其他优化点"></a>其他优化点</h2><ol>
 <li>并行二路归并排序</li>
 </ol>
@@ -153,6 +450,10 @@
 <li>基数排序</li>
 </ol>
 <p>DuckDB 与 ClickHouse 等数据库都引入了基数排序。基数排序是一种<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Sorting_algorithm#Non-comparison_sorts">非比较的基于分布的排序方式</a>，时间复杂度为 O(nk)，其中 k 是排序键的宽度（比如 Int32 的宽度是 4 字节），n 是排序键个数。当 n 很大的时候，基数排序的性能优势就会显现出来。</p>
+<ol start="3">
+<li>特化 <code>Cursor</code></li>
+</ol>
+<p>如果排序键只有一个，且是 non-nullable 的简单类型，便可以将 Rows 直接 downcast 为简单类型的一维数组，对于简单类型有着非常好的优化效果。类似的，如果存在多个排序键，但是他们可以合并成一个简单的排序键（比如两个 i32 可以合并为 i64）。这是一类大的优化方向。</p>
 <h2 id="局限性"><a href="#局限性" class="headerlink" title="局限性"></a>局限性</h2><p>如果排序键为聚合函数的结果，以目前的实现来说，用于排序的始终就只有一条流水线，无法进行流化多路归并。需要针对这种情况优化流水线。</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="built_in">COUNT</span>(<span class="operator">*</span>) <span class="keyword">as</span> c <span class="keyword">FROM</span> <span class="keyword">table</span> <span class="keyword">ORDER</span> <span class="keyword">BY</span> c;</span><br></pre></td></tr></table></figure>
 
@@ -161,7 +462,7 @@
 
 </article>
 
-<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/column-storage-prewhere/">列式存储之PREWHERE优化<span class="note">较早</span></a><div class="line"></div><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
+<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/column-storage-prewhere/">列式存储之PREWHERE优化<span class="note">较早</span></a><div class="line"></div><a id="prev" href="/2022-events/">2022 事件簿<span class="note">较新</span></a><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
 
 
 
