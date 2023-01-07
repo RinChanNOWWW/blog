@@ -48,8 +48,8 @@ categories:
 
 - 注册了一个有效期十年的域名。
 
-- 追番回到了 BT 下载的年代。在 NAS 上依托 qbittorent + auto-bangumi + jellyfin 打造了一套全自动追番下载的工作流。通过 IPv6 访问这套服务。
-给服务绑定了域名，利用 NGINX 反代，并打通了 Websocket，使得 jellyfin 上可以多用户同步观看视频。
+- 追番回到了 BT 下载的年代。在 NAS 上依托 qbittorent + auto-bangumi + jellyfin 打造了一套全自动追番+下载+观看的工作流。通过 IPv6 访问这套服务。
+给服务绑定了域名，利用 NGINX 反代，并打通了 Websocket，使得 jellyfin 上可以多用户同步观看视频。顺手写了一个叫 [mikan-notifier](https://github.com/RinChanNOWWW/mikan-notifier) 的小工具，用来轮询 mikan 的番剧订阅，通过 QQ 机器人及时通知更新。
 
 - 进入 Datafuselabs 实习，第一份数据库业界的工作。实现了几个较大的 feature，其中一个对 sort 算子的优化在 Databend 研究社活动中进行了分享。
 参与了新的类型系统和表达式框架的重构，这个过程中学习到了大量源码。
