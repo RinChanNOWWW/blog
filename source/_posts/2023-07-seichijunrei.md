@@ -161,7 +161,7 @@ JR 木幡站旁边的京阿尼本社与第五工作室：
 
 ### 七里滨
 
-江电镰仓高校前站，也是 OP 里咲太追电车后的第一个车站。（追电车的名场景拍了视频，不过就不放在博客里了，看看能不能小传一个 b 站）
+江电镰仓高校前站，也是 OP 里咲太追电车后的第一个车站。（追电车的名场景拍了个视频: https://www.bilibili.com/video/BV12M4y1H7ex/）
 
 ![2](https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/blog/images/2023-07-seichijunrei/Seishunbutayaro/2.jpg)
 
