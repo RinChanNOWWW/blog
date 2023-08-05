@@ -2,13 +2,15 @@
 <html lang='zh-CN'>
 
 <head>
-  <meta name="generator" content="Hexo 5.4.0">
+  <meta name="generator" content="Hexo 6.3.0">
+  <meta name="hexo-theme" content="https://github.com/xaoxuu/hexo-theme-stellar/tree/1.18.5">
   <meta charset="utf-8">
   
 
   <meta http-equiv='x-dns-prefetch-control' content='on' />
-  <link rel='dns-prefetch' href='https://cdn.jsdelivr.net'>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel='dns-prefetch' href='https://gcore.jsdelivr.net'>
+  <link rel="preconnect" href="https://gcore.jsdelivr.net" crossorigin>
+  <link rel='dns-prefetch' href='//unpkg.com'>
 
   <meta name="renderer" content="webkit">
   <meta name="force-rendering" content="webkit">
@@ -17,6 +19,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <meta name="theme-color" content="#f8f8f8">
+  
   <title>リン屋</title>
 
   
@@ -44,6 +47,11 @@
   
 
   
+
+  
+
+
+  
 </head>
 
 <body>
@@ -54,23 +62,20 @@
     <aside class='l_left' layout=''>
     
 
+  
 
-<header class="header">
+<header class="header"><div class="logo-wrap"><a class="avatar" href="/about/"><div class="bg" style="opacity:0;background-image:url(https://gcore.jsdelivr.net/gh/cdn-x/placeholder@1.0.4/avatar/round/rainbow64@3x.webp);"></div><img no-lazy class="avatar" src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/profile/avatar.jpg" onerror="javascript:this.classList.add('error');this.src='https://gcore.jsdelivr.net/gh/cdn-x/placeholder@1.0.4/image/2659360.svg';"></a><a class="title" href="/"><div class="main" ff="title">リン屋</div><div class="sub cap">RinChanNOW's blog</div></a></div>
 
-<div class="logo-wrap"><a class="avatar" href="/about/"><div class="bg" style="opacity:0;background-image:url(https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.2/avatar/round/rainbow64@3x.webp);"></div><img no-lazy class="avatar" src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/profile/avatar.jpg" onerror="javascript:this.classList.add('error');this.src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/image/2659360.svg';"></a><a class="title" href="/"><div class="main">リン屋</div><div class="sub cap">RinChanNOW's blog</div></a></div>
-<nav class="menu dis-select"><a class="nav-item active" href="/">博客</a><a class="nav-item" href="/about/">关于</a></nav></header>
+<nav class="menu dis-select"><a class="nav-item active" href="/">博客</a><a class="nav-item" href="/about/">关于</a></nav>
+</header>
 
-<div class="widgets"><div class='widget-wrap' id='markdown'>
-  <div class='widget-header cap dis-select'>
-    <span class='name'>你好</span>
-  </div>
-  <div class='widget-body fs14'>
-    
-      <p>这里是 RinChanNOW 的个人娱乐用站点</p>
 
-    
-  </div>
-</div>
+<div class="widgets">
+<widget class="widget-wrapper search"><div class="widget-body"><div class="search-wrapper" id="search"><form class="search-form"><input type="text" class="search-input" id="search-input" placeholder="站内搜索"><svg t="1670596976048" class="icon search-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2676" width="200" height="200"><path d="M938.2 832.6L723.8 618.1c-2.5-2.5-5.3-4.4-7.9-6.4 36.2-55.6 57.3-121.8 57.3-193.1C773.3 222.8 614.6 64 418.7 64S64 222.8 64 418.6c0 195.9 158.8 354.6 354.6 354.6 71.3 0 137.5-21.2 193.2-57.4 2 2.7 3.9 5.4 6.3 7.8L832.5 938c14.6 14.6 33.7 21.9 52.8 21.9 19.1 0 38.2-7.3 52.8-21.8 29.2-29.1 29.2-76.4 0.1-105.5M418.7 661.3C284.9 661.3 176 552.4 176 418.6 176 284.9 284.9 176 418.7 176c133.8 0 242.6 108.9 242.6 242.7 0 133.7-108.9 242.6-242.6 242.6" p-id="2677"></path></svg></form><div id="search-result"></div><div class="search-no-result">没有找到内容！</div></div></div></widget>
+
+<widget class="widget-wrapper recent"><div class="widget-header cap theme dis-select"><span class="name">最近更新</span></div><div class="widget-body related-posts fs14"><a class="item title" href="/2023-07-seichijunrei/"><span class="title">RinChanNOW 的 2023 年 7 月圣地巡礼合集</span></a><a class="item title" href="/databend-unnest/"><span class="title">Databend Unnest 函数的实现</span></a><a class="item title" href="/2022-events/"><span class="title">2022 事件簿</span></a><a class="item title" href="/databend-sort-optimization/"><span class="title">Databend Sort 优化</span></a><a class="item title" href="/column-storage-prewhere/"><span class="title">列式存储之PREWHERE优化</span></a></div></widget>
+
+
 </div>
 
 
@@ -79,71 +84,40 @@
       
   
 
-<header class="header mobile-only">
-
-<div class="logo-wrap"><a class="avatar" href="/about/"><div class="bg" style="opacity:0;background-image:url(https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.2/avatar/round/rainbow64@3x.webp);"></div><img no-lazy class="avatar" src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/profile/avatar.jpg" onerror="javascript:this.classList.add('error');this.src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/image/2659360.svg';"></a><a class="title" href="/"><div class="main">リン屋</div><div class="sub cap">RinChanNOW's blog</div></a></div>
-</header>
+<header class="header mobile-only"><div class="logo-wrap"><a class="avatar" href="/about/"><div class="bg" style="opacity:0;background-image:url(https://gcore.jsdelivr.net/gh/cdn-x/placeholder@1.0.4/avatar/round/rainbow64@3x.webp);"></div><img no-lazy class="avatar" src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/profile/avatar.jpg" onerror="javascript:this.classList.add('error');this.src='https://gcore.jsdelivr.net/gh/cdn-x/placeholder@1.0.4/image/2659360.svg';"></a><a class="title" href="/"><div class="main" ff="title">リン屋</div><div class="sub cap">RinChanNOW's blog</div></a></div></header>
 
 
 
       
 
 
-  <div class='nav-wrap'>
-  <nav class='sub post cap'>
-    
-      <a class='active' href='/'>近期发布</a>
-    
-    
-      
-        <a href='/blog/categories'>分类</a>
-      
-    
-    
-      
-        <a href='/blog/tags'>标签</a>
-      
-    
-    
-      
-        <a href='/blog/archives'>归档</a>
-      
-    
-  </nav>
-</div>
+  
 
-  <div class="post-list post"><a class="post-card post " href="/2023-07-seichijunrei/"><article class="md">
-<h2 class="post-title">RinChanNOW 的 2023 年 7 月圣地巡礼合集</h2><div class="excerpt"><p>二次元去日本当然要圣地巡礼。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2023-08-05T02:53:25.000Z">2023-08-05</time></span><span class="cap breadcrumb">生活</span><div>
-</article></a><a class="post-card post " href="/databend-unnest/"><article class="md">
-<h2 class="post-title">Databend Unnest 函数的实现</h2><div class="excerpt"><p>unnest 是一个在分析查询中比较常见的函数，它的作用是将一个嵌套（多维）数组展开为一个一维向量。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2023-03-13T01:29:50.000Z">2023-03-13</time></span><span class="cap breadcrumb">数据库</span><div>
-</article></a><a class="post-card post " href="/2022-events/"><article class="md">
-<h2 class="post-title">2022 事件簿</h2><div class="excerpt"><p>2022 年对于我来说是很充实的一年，尤其是下半年，感觉经历了很多。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2023-01-05T01:34:45.000Z">2023-01-05</time></span><span class="cap breadcrumb">生活</span><div>
-</article></a><a class="post-card post " href="/databend-sort-optimization/"><article class="md">
-<h2 class="post-title">Databend Sort 优化</h2><div class="excerpt"><p>最近 Databend 针对数据排序进行了一波性能优化，在此记录一番。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2022-11-05T09:23:42.000Z">2022-11-05</time></span><span class="cap breadcrumb">数据库</span><div>
-</article></a><a class="post-card post " href="/column-storage-prewhere/"><article class="md">
-<h2 class="post-title">列式存储之PREWHERE优化</h2><div class="excerpt"><p>最近学习到了列式存储引擎中的 PREWHERE 优化，写下此文来记录一下与此有关的所见所想。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2022-09-02T10:47:43.000Z">2022-09-02</time></span><span class="cap breadcrumb">数据库</span><div>
-</article></a><a class="post-card post " href="/2022-winter-summary/"><article class="md">
-<h2 class="post-title">寒假总结</h2><div class="excerpt"><p>这个寒假我做了些什么？</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2022-02-22T08:06:20.000Z">2022-02-22</time></span><span class="cap breadcrumb">生活</span><div>
-</article></a></div>
+<div class="nav-wrap"><nav class="sub post cap"><a class="active" href="/">近期发布</a><a href="/blog/categories">分类</a><a href="/blog/tags">标签</a><a href="/blog/archives">归档</a></nav></div>
+
+  <div class="post-list post"><a class="post-card post " href="/2023-07-seichijunrei/">
+<article class="md-text"><h2 class="post-title">RinChanNOW 的 2023 年 7 月圣地巡礼合集</h2><div class="excerpt"><p>二次元去日本当然要圣地巡礼。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2023-08-05T02:53:25.000Z">2023-08-05</time></span><span class="cap breadcrumb">生活</span></div></article>
+</a><a class="post-card post " href="/databend-unnest/">
+<article class="md-text"><h2 class="post-title">Databend Unnest 函数的实现</h2><div class="excerpt"><p>unnest 是一个在分析查询中比较常见的函数，它的作用是将一个嵌套（多维）数组展开为一个一维向量。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2023-03-13T01:29:50.000Z">2023-03-13</time></span><span class="cap breadcrumb">数据库</span></div></article>
+</a><a class="post-card post " href="/2022-events/">
+<article class="md-text"><h2 class="post-title">2022 事件簿</h2><div class="excerpt"><p>2022 年对于我来说是很充实的一年，尤其是下半年，感觉经历了很多。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2023-01-05T01:34:45.000Z">2023-01-05</time></span><span class="cap breadcrumb">生活</span></div></article>
+</a><a class="post-card post " href="/databend-sort-optimization/">
+<article class="md-text"><h2 class="post-title">Databend Sort 优化</h2><div class="excerpt"><p>最近 Databend 针对数据排序进行了一波性能优化，在此记录一番。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2022-11-05T09:23:42.000Z">2022-11-05</time></span><span class="cap breadcrumb">数据库</span></div></article>
+</a><a class="post-card post " href="/column-storage-prewhere/">
+<article class="md-text"><h2 class="post-title">列式存储之PREWHERE优化</h2><div class="excerpt"><p>最近学习到了列式存储引擎中的 PREWHERE 优化，写下此文来记录一下与此有关的所见所想。</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2022-09-02T10:47:43.000Z">2022-09-02</time></span><span class="cap breadcrumb">数据库</span></div></article>
+</a><a class="post-card post " href="/2022-winter-summary/">
+<article class="md-text"><h2 class="post-title">寒假总结</h2><div class="excerpt"><p>这个寒假我做了些什么？</p></div><div class="meta cap"><span class="cap" id="post-meta">发布于&nbsp;<time datetime="2022-02-22T08:06:20.000Z">2022-02-22</time></span><span class="cap breadcrumb">生活</span></div></article>
+</a></div>
   
   <div class='paginator-wrap dis-select'>
-    <a class='paginator prev disable' href='/'>
-      <img src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/arrow/f049bbd4e88ec.svg'/>
-    </a>
-    <div class='paginator current'>
-      1<span class='sep'></span>6
-    </div>
-    <a class='paginator next' href='/page/2/'>
-      <img src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/arrow/064b95430caf4.svg'/>
-    </a>
+  <span class="extend prev" rel="prev"></span><span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="page-number" href="/page/3/">3</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><a class="extend next" rel="next" href="/page/2/"></a>
   </div>
 
 
 
 
       
-<footer class="page-footer reveal fs12"><hr><div class="text"><p>本博客所有文章除特别声明外，均采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> 许可协议，转载请注明出处。</p>
-<p>本站由 <a href="https://github.com/RinChanNOWWW/">@RinChanNOW</a> 创建，使用 <a href="https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0" title="v1.5.0">Stellar</a> 作为主题。</p>
+<footer class="page-footer reveal fs12"><hr><div class="text"><p>本站由 <a href="/">@anonymity</a> 使用 <a href="https://github.com/xaoxuu/hexo-theme-stellar">Stellar</a> 主题创建。<br>本博客所有文章除特别声明外，均采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> 许可协议，转载请注明出处。</p>
 </div></footer>
 
       <div class='float-panel mobile-only blur' style='display:none'>
@@ -156,7 +130,7 @@
   </div>
   <div class='scripts'>
     <script type="text/javascript">
-  stellar = {
+  const stellar = {
     // 懒加载 css https://github.com/filamentgroup/loadCSS
     loadCSS: (href, before, media, attributes) => {
       var doc = window.document;
@@ -247,7 +221,8 @@
       }
     }
   };
-  stellar.github = 'https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0';
+  stellar.version = '1.18.5';
+  stellar.github = 'https://github.com/xaoxuu/hexo-theme-stellar/tree/1.18.5';
   stellar.config = {
     date_suffix: {
       just: '刚刚',
@@ -260,23 +235,40 @@
 
   // required plugins (only load if needs)
   stellar.plugins = {
-    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js',
-    sitesjs: '/js/plugins/sites.js',
-    friendsjs: '/js/plugins/friends.js',
+    jQuery: 'https://gcore.jsdelivr.net/npm/jquery@3.6.2/dist/jquery.min.js'
   };
 
+  if ('local_search') {
+    stellar.search = {};
+    stellar.search.service = 'local_search';
+    if (stellar.search.service == 'local_search') {
+      let service_obj = Object.assign({}, {"field":"all","path":"/search.json","content":true,"sort":"-date"});
+      stellar.search[stellar.search.service] = service_obj;
+    }
+  }
+
+  // stellar js
+  stellar.plugins.stellar = Object.assign({"sites":"/js/plugins/sites.js","friends":"/js/plugins/friends.js","ghinfo":"/js/plugins/ghinfo.js","timeline":"/js/plugins/timeline.js","linkcard":"/js/plugins/linkcard.js","fcircle":"/js/plugins/fcircle.js","weibo":"/js/plugins/weibo.js"});
+
+  stellar.plugins.marked = Object.assign("https://cdn.bootcdn.net/ajax/libs/marked/4.0.18/marked.min.js");
   // optional plugins
   if ('true' == 'true') {
-    stellar.plugins.lazyload = Object.assign({"enable":true,"js":"https://cdn.jsdelivr.net/npm/vanilla-lazyload@17.3.1/dist/lazyload.min.js","transition":"blur"});
+    stellar.plugins.lazyload = Object.assign({"enable":true,"js":"https://gcore.jsdelivr.net/npm/vanilla-lazyload@17.8.3/dist/lazyload.min.js","transition":"blur"});
   }
   if ('true' == 'true') {
-    stellar.plugins.swiper = Object.assign({"enable":true,"css":"https://unpkg.com/swiper/swiper-bundle.min.css","js":"https://unpkg.com/swiper/swiper-bundle.min.js"});
+    stellar.plugins.swiper = Object.assign({"enable":true,"css":"https://unpkg.com/swiper@8.4.5/swiper-bundle.min.css","js":"https://unpkg.com/swiper@8.4.5/swiper-bundle.min.js"});
   }
   if ('' == 'true') {
-    stellar.plugins.scrollreveal = Object.assign({"enable":null,"js":"https://cdn.jsdelivr.net/npm/scrollreveal@4.0.9/dist/scrollreveal.min.js","distance":"8px","duration":500,"interval":100,"scale":1});
+    stellar.plugins.scrollreveal = Object.assign({"enable":null,"js":"https://gcore.jsdelivr.net/npm/scrollreveal@4.0.9/dist/scrollreveal.min.js","distance":"8px","duration":500,"interval":100,"scale":1});
   }
   if ('true' == 'true') {
-    stellar.plugins.preload = Object.assign({"enable":true,"service":"flying_pages","instant_page":"https://cdn.jsdelivr.net/gh/volantis-x/cdn-volantis@4.1.2/js/instant_page.js","flying_pages":"https://cdn.jsdelivr.net/gh/gijo-varghese/flying-pages@2.1.2/flying-pages.min.js"});
+    stellar.plugins.preload = Object.assign({"enable":true,"service":"flying_pages","instant_page":"https://gcore.jsdelivr.net/gh/volantis-x/cdn-volantis@4.1.2/js/instant_page.js","flying_pages":"https://gcore.jsdelivr.net/gh/gijo-varghese/flying-pages@2.1.2/flying-pages.min.js"});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.fancybox = Object.assign({"enable":true,"js":"https://gcore.jsdelivr.net/npm/@fancyapps/ui@4.0/dist/fancybox.umd.js","css":"https://gcore.jsdelivr.net/npm/@fancyapps/ui@4.0/dist/fancybox.css","selector":".swiper-slide img"});
+  }
+  if ('false' == 'true') {
+    stellar.plugins.heti = Object.assign({"enable":false,"css":"https://unpkg.com/heti@0.9.2/umd/heti.min.css","js":"https://unpkg.com/heti@0.9.2/umd/heti-addon.min.js"});
   }
 </script>
 
@@ -288,34 +280,6 @@
 
 
 <!-- optional -->
-
-  <script>
-  function loadBeaudar() {
-    const els = document.querySelectorAll("#comments #beaudar");
-    if (els.length === 0) return;
-    els.forEach((el, i) => {
-      try {
-        el.innerHTML = '';
-      } catch (error) {
-        console.log(error);
-      }
-      var script = document.createElement('script');
-      script.src = 'https://beaudar.lipk.org/client.js';
-      script.async = true;
-      for (let key of Object.keys(el.attributes)) {
-        let attr = el.attributes[key];
-        if (['class', 'id'].includes(attr.name) === false) {
-          script.setAttribute(attr.name, attr.value);
-        }
-      }
-      el.appendChild(script);
-    });
-  }
-  window.addEventListener('DOMContentLoaded', (event) => {
-      loadBeaudar();
-  });
-</script>
-
 
 
 
