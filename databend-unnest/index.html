@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+
+<head>
+  <meta name="generator" content="Hexo 5.4.0">
+  <meta charset="utf-8">
+  
+
+  <meta http-equiv='x-dns-prefetch-control' content='on' />
+  <link rel='dns-prefetch' href='https://cdn.jsdelivr.net'>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+  <meta name="renderer" content="webkit">
+  <meta name="force-rendering" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  <meta name="HandheldFriendly" content="True" >
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#f8f8f8">
+  <title>Databend Unnest 函数的实现 - リン屋</title>
+
+  
+    <meta name="description" content="unnest 是一个在分析查询中比较常见的函数，它的作用是将一个嵌套（多维）数组展开为一个一维向量。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Databend Unnest 函数的实现">
+<meta property="og:url" content="https://github.com/RinChanNOWWW/databend-unnest/">
+<meta property="og:site_name" content="リン屋">
+<meta property="og:description" content="unnest 是一个在分析查询中比较常见的函数，它的作用是将一个嵌套（多维）数组展开为一个一维向量。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-03-13T01:29:50.000Z">
+<meta property="article:modified_time" content="2023-03-13T01:29:50.000Z">
+<meta property="article:author" content="RinChanNOW">
+<meta property="article:tag" content="数据库">
+<meta name="twitter:card" content="summary">
+  
+  
+
+  <!-- feed -->
+  
+
+  
+    
+<link rel="stylesheet" href="/css/main.css">
+
+  
+
+  
+
+  
+</head>
+
+<body>
+  
+
+
+  <div class='l_body' id='start'>
+    <aside class='l_left' layout='post'>
+    
+
+
+<header class="header">
+
+<div class="logo-wrap"><a class="avatar" href="/about/"><div class="bg" style="opacity:0;background-image:url(https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.2/avatar/round/rainbow64@3x.webp);"></div><img no-lazy class="avatar" src="https://cdn.jsdelivr.net/gh/RinChanNOWWW/jsdelivrp-cdn@master/profile/avatar.jpg" onerror="javascript:this.classList.add('error');this.src='https://cdn.jsdelivr.net/gh/cdn-x/placeholder@1.0.1/image/2659360.svg';"></a><a class="title" href="/"><div class="main">リン屋</div><div class="sub cap">RinChanNOW's blog</div></a></div>
+<nav class="menu dis-select"><a class="nav-item active" href="/">博客</a><a class="nav-item" href="/about/">关于</a></nav></header>
+
+<div class="widgets">
+
+<div class="widget-wrap single" id="toc"><div class="widget-header cap dis-select"><span class="name">本文目录</span></div><div class="widget-body fs14"><div class="doc-tree active"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9F%BA%E6%9C%AC%E6%80%9D%E8%B7%AF"><span class="toc-text">基本思路</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9E%84%E5%BB%BA%E7%AE%97%E5%AD%90"><span class="toc-text">构建算子</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Databend-%E8%A1%A8%E8%BE%BE%E5%BC%8F%E6%89%A7%E8%A1%8C%E7%AE%80%E4%BB%8B"><span class="toc-text">Databend 表达式执行简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Unnest-%E8%A1%A8%E8%BE%BE%E5%BC%8F"><span class="toc-text">Unnest 表达式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Unnest-%E7%89%A9%E7%90%86%E8%AE%A1%E5%88%92"><span class="toc-text">Unnest 物理计划</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Unnest-%E6%B5%81%E6%B0%B4%E7%BA%BF%E7%AE%97%E5%AD%90"><span class="toc-text">Unnest 流水线算子</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%B6%E4%BB%96"><span class="toc-text">其他</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Table-Function"><span class="toc-text">Table Function</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Unnest-%E5%A4%9A%E7%BB%B4%EF%BC%88%E5%B5%8C%E5%A5%97%EF%BC%89%E6%95%B0%E7%BB%84"><span class="toc-text">Unnest 多维（嵌套）数组</span></a></li></ol></li></ol></div></div></div>
+
+
+</div>
+
+
+    </aside>
+    <div class='l_main'>
+      
+
+      
+
+
+<div class="bread-nav fs12"><div id="breadcrumb"><a class="cap breadcrumb" href="/">主页</a><span class="sep"></span><a class="cap breadcrumb" href="/">文章</a><span class="sep"></span><a class="cap breadcrumb-link" href="/blog/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/">数据库</a> <span class="sep"></span> <a class="cap breadcrumb-link" href="/blog/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/%E6%BA%90%E7%A0%81%E7%AC%94%E8%AE%B0/">源码笔记</a></div><div id="post-meta">发布于&nbsp;<time datetime="2023-03-13T01:29:50.000Z">2023-03-13</time></div></div>
+
+<article class='content md post'>
+<h1 class="article-title"><span>Databend Unnest 函数的实现</span></h1>
+<p><code>unnest</code> 是一个在分析查询中比较常见的函数，它的作用是将一个嵌套（多维）数组展开为一个一维向量。</p>
+<span id="more"></span>
+
+
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="built_in">unnest</span>([<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>]);</span><br><span class="line"><span class="comment">----</span></span><br><span class="line"><span class="number">1</span></span><br><span class="line"><span class="number">2</span></span><br><span class="line"><span class="number">3</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">select</span> <span class="built_in">unnest</span>([[<span class="number">1</span>,<span class="number">2</span>],[<span class="number">3</span>]]);</span><br><span class="line"><span class="comment">----</span></span><br><span class="line"><span class="number">1</span></span><br><span class="line"><span class="number">2</span></span><br><span class="line"><span class="number">3</span></span><br></pre></td></tr></table></figure>
+
+<p>Tacking issue: <a href="https://github.com/datafuselabs/databend/issues/10295">https://github.com/datafuselabs/databend/issues/10295</a><br>在下文中，我会逐步拆解 Databend 中实现 unnest 函数所需要处理的要点。</p>
+<h2 id="基本思路"><a href="#基本思路" class="headerlink" title="基本思路"></a>基本思路</h2><p>对于一般的函数，我们可以按照这个文档里的方法，通过统一的 <code>FunctionFactory</code> 进行注册。Databend 会通过统一抽象的 API 进行函数调用与向量化执行。</p>
+<p>普通的函数的一行输入会对应一行输出，但是 <code>unnest</code> 并不是，它的一行输入会对应多行输出，这种函数也被称作 Set Returning Function (SRF)。所以我们并不能将 <code>unnest</code> 像普通函数一样通过 <code>FuntionFactory</code> 进行注册，而需要为其设计单独的逻辑。</p>
+<p>参考 PostgreSQL 与 DuckDB 等数据库的实现可以发现，它们都将 <code>unnest</code> 函数重写为了一个单独的算子（PostgreSQL: <code>ProjectSet</code> 算子，DuckDB：<code>UNNEST</code> 算子）。因此，Databend 也沿用这种设计，单独抽离出一个 <code>Unnest</code> 算子进行相关计算。</p>
+<p><code>Unnest</code> 算子主要需要承载的功能是：接受 <code>DataBlock</code> 向量化输入，按照 <code>unnest</code> 列将输入的各行展开，最后将展开后的列组成 <code>DataBlock</code> 输出。但是这将会面临几个问题：</p>
+<ol>
+<li>如何将原本的 EvalScalar算子（更进一步说，其中的 FunctionCall）转换为 Unnest 算子？</li>
+<li>如何处理 unnest 函数与其他操作结合的情况？（如 select unnest([1,2,3]) + 1，输出三行：2,3,4）</li>
+<li>如何按照 unnest 列展开其他列？如何处理多个 unnest 列？</li>
+</ol>
+<p>且看下文分解。</p>
+<h2 id="构建算子"><a href="#构建算子" class="headerlink" title="构建算子"></a>构建算子</h2><p>上述的 1. 与 2. 其实可以归纳为同一个问题，那就是 Planner 如何为 <code>Unnest</code> 构建执行计划与算子。</p>
+<h3 id="Databend-表达式执行简介"><a href="#Databend-表达式执行简介" class="headerlink" title="Databend 表达式执行简介"></a>Databend 表达式执行简介</h3><p>这里先简单说明一下 Databend 中表达式算子的构建与执行：</p>
+<ol>
+<li>AST -&gt; 逻辑计划。在 Bind 阶段，AST 中的表达式会被 semantic check 为 <code>ScalarExpr</code>，并被放入逻辑计划 <code>EvalScalar</code> 中。</li>
+<li>逻辑计划 -&gt; 物理计划。在物理计划构建时，<code>ScalarExpr</code> 会被 expression check 为 <code>Expr</code>，并被放入物理计划 <code>EvalScalar</code> 中。<code>Expr</code> 是可以被 <code>Evaluator</code> 执行的结构。</li>
+<li>物理计划 -&gt; 流水线算子。在构建流水线时，<code>EvalScalar</code> 会被构建为 <code>BlockOperator::Map</code> 算子。在流水线执行过程中，<code>Map</code> 算子会接受 <code>DataBlock</code> 并根据构建好的 Expr 进行计算。每一个 <code>Expr</code> 会输出一列数据，并添加到原始 <code>DataBlock</code> 的最后并输出到下游（不需要的列会被后续 <code>Projection</code> 算子移除）。</li>
+</ol>
+<p>现在要在表达式计算中引入 <code>Unnest</code>，就在上述三个部分中做出修改。</p>
+<h3 id="Unnest-表达式"><a href="#Unnest-表达式" class="headerlink" title="Unnest 表达式"></a>Unnest 表达式</h3><p>对于构建逻辑计划，这里选择引入一个新的 <code>ScalarExpr</code>：<code>ScalarExpr::Unnest</code>。在 semantic check 时，可能会对特定函数调用进行重写，可以利用这个流程，将 <code>unnest</code> 函数调用重写为 ScalarExpr::Unnest 表达式（<a href="https://github.com/datafuselabs/databend/blob/583a3f2029d749b5974445fd90ad137dc0b2fc91/src/query/sql/src/planner/semantic/type_check.rs#L1704%EF%BC%89%E3%80%82%E5%85%B6%E7%BB%93%E6%9E%84%E5%A6%82%E4%B8%8B%EF%BC%9A">https://github.com/datafuselabs/databend/blob/583a3f2029d749b5974445fd90ad137dc0b2fc91/src/query/sql/src/planner/semantic/type_check.rs#L1704）。其结构如下：</a></p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">pub</span> <span class="class"><span class="keyword">struct</span> <span class="title">Unnest</span></span> &#123;</span><br><span class="line">    <span class="keyword">pub</span> argument: <span class="built_in">Box</span>&lt;ScalarExpr&gt;,</span><br><span class="line">    <span class="keyword">pub</span> return_type: <span class="built_in">Box</span>&lt;DataType&gt;,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>后续的 <code>RawExpr</code>, <code>Expr</code>, <code>RemoteExpr</code> 结构可以直径从 <code>ScalarExpr</code> 转换得到。semantic check 也会保证 <code>Unnest</code> 的参数 <code>argument</code> 的返回类型一定是 <code>DataType::Array</code>。</p>
+<p>P.S. <code>Unnest</code> 表达式依然是逻辑计划 <code>EvalScalar</code> 的一部分。</p>
+<h3 id="Unnest-物理计划"><a href="#Unnest-物理计划" class="headerlink" title="Unnest 物理计划"></a>Unnest 物理计划</h3><p>接下来便是物理计划的构建。在上一节“基本思路”中提到，<code>Unnest</code> 是一种 SRF，与其他表达式的执行逻辑差别很大，需要单独设计一种算子，因此这里引入一个新的物理计划 <code>Unnest</code>。</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">pub</span> <span class="class"><span class="keyword">struct</span> <span class="title">Unnest</span></span> &#123;</span><br><span class="line">    <span class="comment">/// A unique id of operator in a `PhysicalPlan` tree.</span></span><br><span class="line">    <span class="comment">/// Only used for display.</span></span><br><span class="line">    <span class="keyword">pub</span> plan_id: <span class="built_in">u32</span>,</span><br><span class="line">    <span class="keyword">pub</span> input: <span class="built_in">Box</span>&lt;PhysicalPlan&gt;,</span><br><span class="line">    <span class="comment">/// How many unnest columns.</span></span><br><span class="line">    <span class="keyword">pub</span> num_columns: <span class="built_in">usize</span>,</span><br><span class="line">    <span class="comment">/// Only used for explain</span></span><br><span class="line">    <span class="keyword">pub</span> stat_info: <span class="built_in">Option</span>&lt;PlanStatsInfo&gt;,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里有一个取巧的地方，就是 <code>Unnest</code> 中只记录了有多少列 unnest 列 <code>num_columns</code>，可以这样做的原因稍后会解释。</p>
+<p>在将逻辑计划 <code>EvalScalar</code> build 为物理计划 <code>EvalScalar</code> 时，如果表达式中存在 <code>Unnest</code> 表达式，我们需要把他们提取出来作为单独一层的物理计划。由于 <code>Unnest</code> 表达式需要能够与其他表达式一起嵌套使用，所以在构建物理计划的时候我们以 <code>Unnest</code> 为分界，将表达式计算的物理计划分成三层（编号为执行顺序）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">3. Eval After Unnest Scalar</span><br><span class="line">    |_______2. Unnest</span><br><span class="line">            |_______1. Eval Before Unnest Scalar</span><br></pre></td></tr></table></figure>
+
+<p>每一层的列输入和列输出如下所示（编号与上述编号对应）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">1. [i1, i2, .., in] -&gt; [i1, i2, .. in, b1, b2, .., bm]</span><br><span class="line">2. [i1, i2, .. in, b1, b2, .., bm] -&gt; [i1, i2, .. in, u1, u2, .., um]</span><br><span class="line">3. [i1, i2, .. in, u1, u2, .., un] -&gt; [i1, i2, .. in, u1, u2, .., um, o1, o2, .., op]</span><br></pre></td></tr></table></figure>
+
+<p>其中 n 为上游输入的列数，m 为 <code>Unnest</code> 列数，即 <code>Unnest</code> 内部参数需要执行的 <code>Expr</code>；p 为 <code>Unnest</code> 之后执行的表达式个数，即非 <code>Unnest</code> 函数内部参数需要执行的 <code>Expr</code>。</p>
+<p>在真正执行时，计划 1. 会将需要执行 <code>Unnest</code> 的数据放到 <code>DataBlock</code> 后侧；计划 2. 会将 <code>Unnest</code> 参数列原地更新为展开后的 <code>Unnest</code> 列；计划 3. 将展开后的数据进行最后整体的表达式计算。</p>
+<p>由于计划 2. 中需要执行 <code>Unnest</code> 的列一定在 <code>DataBlock</code> 的最后，所以我们只需要在 <code>Unnest</code> 计划中记录有多少 unnest 列即可。</p>
+<p>在具体实现上，每一个 <code>ScalarExpr</code> 会被遍历两次，第一次会收集 <code>Unnest</code> 参数列，并转换成 <code>Expr</code>。第二次会将剩余的外层 <code>ScalarExpr</code> 转换成 <code>Expr</code>，在这个过程中，<code>Unnest</code> 子句会被替换为 <code>Expr::ColumnRef</code>，做为一个最底层数据列进行处理（和  Subquery 类似，因为这层 <code>EvalScalar</code> 能够直接拿到 <code>Unnest</code> 之后的数据，不用进行表达式计算了）。</p>
+<p>两个此收集到的 <code>Expr</code> 会被分别构建为两个 <code>PhysicalPlan::EvalScalar</code>，分别为 <code>PhysicalPlan::Unnest</code> 的子计划与父计划。<br>具体代码：<a href="https://github.com/datafuselabs/databend/blob/583a3f2029d749b5974445fd90ad137dc0b2fc91/src/query/sql/src/executor/physical_plan_builder.rs#L305">https://github.com/datafuselabs/databend/blob/583a3f2029d749b5974445fd90ad137dc0b2fc91/src/query/sql/src/executor/physical_plan_builder.rs#L305</a></p>
+<h3 id="Unnest-流水线算子"><a href="#Unnest-流水线算子" class="headerlink" title="Unnest 流水线算子"></a>Unnest 流水线算子</h3><p>之前的工作都是 <code>Unnest</code> 之外的准备工作，本节将会介绍 <code>Unnest</code> 算子的具体执行流程，也是 <code>Unnest</code> 函数的核心所在。</p>
+<p>单独展开 <code>Unnest</code> 列比较简单，直接提取参数 <code>ArrayColumn</code> 中的底层数据即可。实现 <code>Unnest</code> 的要点在于如何跟随 <code>Unnest</code> 列一起展开非 <code>Unnest</code> 列以及如何处理多 <code>Unnest</code> 列。</p>
+<p>Unnest 的核心我总结为“按行展开”。也就是对于 <code>Unnest</code> 列中的每一行 a（每一行是一个 <code>Array</code>），我们将其展开为多行，在原数据中的对应的行的其他列需要和展开后的 a 对齐。对于非 <code>Unnest</code> 列，通过复制自己的值进行对齐（replicated）；对于 <code>Unnest</code> 列，以展开后最长的 <code>Unnest</code> 列为准，使用 <code>NULL</code> 补齐。</p>
+<p>举个例子：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">+---------+--------+</span><br><span class="line">| arr     | number |</span><br><span class="line">+---------+--------+</span><br><span class="line">| [1,2]   |      0 |</span><br><span class="line">| [3,4,5] |      1 |</span><br><span class="line">+---------+--------+</span><br><span class="line"></span><br><span class="line">↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓</span><br><span class="line"></span><br><span class="line">+-------------+--------+</span><br><span class="line">| unnest(arr) | number |</span><br><span class="line">+-------------+--------+</span><br><span class="line">| 1           |      0 |</span><br><span class="line">| 2           |      0 |</span><br><span class="line">| 3           |      1 |</span><br><span class="line">| 4           |      1 |</span><br><span class="line">+-------------+--------+</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">+---------+---------+</span><br><span class="line">| origin1 | origin2 |</span><br><span class="line">+---------+---------+</span><br><span class="line">| [1,2]   | [1,2,3] |</span><br><span class="line">| [3,4,5] | [4,5]   |</span><br><span class="line">+---------+---------+</span><br><span class="line"></span><br><span class="line">↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓</span><br><span class="line"></span><br><span class="line">+---------+---------+</span><br><span class="line">| unnest1 | unnest2 |</span><br><span class="line">+------ --+---------+</span><br><span class="line">| 1       | 1       |</span><br><span class="line">| 2       | 2       |</span><br><span class="line">| NULL    | 3       |</span><br><span class="line">| 3       | 4       |</span><br><span class="line">| 4       | 5       |</span><br><span class="line">| 5       | NULL    |</span><br><span class="line">+---------+---------+</span><br></pre></td></tr></table></figure>
+
+<p>可见，展开后的行和展开前的行是对应的。</p>
+<p>由于 Databend 是向量化执行，每一次计算会接受一个含有多行的 <code>DataBlock</code>，所以对 <code>Unnest</code> 的计算逻辑我们也最好对整个 <code>DataBlock</code> 进行一次性处理。<br>由于 Databend 中 <code>ArrayColumn</code> 的结构为：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">pub</span> <span class="class"><span class="keyword">struct</span> <span class="title">ArrayColumn</span></span>&lt;T: ValueType&gt; &#123;</span><br><span class="line">    <span class="keyword">pub</span> values: T::Column,</span><br><span class="line">    <span class="keyword">pub</span> offsets: Buffer&lt;<span class="built_in">u64</span>&gt;,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>整个 <code>Array</code> 列其实是存在一个连续的内存中的（每一行数据根据 <code>offsets</code> 进行 slice 得出），因此我们可以直接将底层 <code>Column</code> 作为输出，再根据 <code>offsets</code> 展开复制 <code>Unnest</code> 列的数据即可。但整个过程只能应用于单 <code>Unnest</code> 列的情况，多 <code>Unnest</code> 列我们仍然需要按行处理。</p>
+<p>因此，<code>Unnest</code> 算子的计算流程总体上分为两步：</p>
+<ol>
+<li>处理所有 Unnest 列，得到对齐后的所有 <code>Unnest</code> 列以及统一的 <code>offsets</code>。（<a href="https://github.com/datafuselabs/databend/blob/583a3f2029d749b5974445fd90ad137dc0b2fc91/src/query/sql/src/evaluator/block_operator.rs#L235%EF%BC%89">https://github.com/datafuselabs/databend/blob/583a3f2029d749b5974445fd90ad137dc0b2fc91/src/query/sql/src/evaluator/block_operator.rs#L235）</a></li>
+<li>将上一步计算得到的 <code>offsets</code> 应用于非 <code>Unnest</code> 列进行复制，得到最后可以输出的结果。（<a href="https://github.com/datafuselabs/databend/blob/583a3f2029d749b5974445fd90ad137dc0b2fc91/src/query/sql/src/evaluator/block_operator.rs#L161%EF%BC%89">https://github.com/datafuselabs/databend/blob/583a3f2029d749b5974445fd90ad137dc0b2fc91/src/query/sql/src/evaluator/block_operator.rs#L161）</a></li>
+</ol>
+<p>其中第 2. 步比较简单，这里就重点介绍一下第 1. 步的具体流程。</p>
+<p>首先，我们可以根据所有 <code>Unnest</code> 列的 <code>offsets</code> 提前计算出最后的 <code>offsets</code> 数组。即对于每一行，在所有 offset 中取最大值。</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 提前收集 ArrayColumn 中的每一行 Column</span></span><br><span class="line"><span class="keyword">let</span> unnest_columns = unnest_columns</span><br><span class="line">    .into_iter()</span><br><span class="line">    .map(|col| &#123;</span><br><span class="line">        <span class="keyword">let</span> typ = col.values.data_type().unnest();</span><br><span class="line">        <span class="keyword">let</span> arrays = col.iter().map(|c| c.unnest()).collect::&lt;<span class="built_in">Vec</span>&lt;_&gt;&gt;();</span><br><span class="line">        (typ, arrays)</span><br><span class="line">    &#125;)</span><br><span class="line">    .collect::&lt;<span class="built_in">Vec</span>&lt;_&gt;&gt;();</span><br><span class="line"><span class="keyword">let</span> <span class="keyword">mut</span> offsets = <span class="built_in">Vec</span>::with_capacity(num_rows + <span class="number">1</span>);</span><br><span class="line">offsets.push(<span class="number">0</span>);</span><br><span class="line"><span class="keyword">let</span> <span class="keyword">mut</span> new_num_rows = <span class="number">0</span>; <span class="comment">// Rows of the unnested `Column`s.</span></span><br><span class="line"><span class="keyword">for</span> row <span class="keyword">in</span> <span class="number">0</span>..num_rows &#123;</span><br><span class="line">    <span class="keyword">let</span> len = unnest_columns</span><br><span class="line">        .iter()</span><br><span class="line">        .map(|(_, col)| <span class="keyword">unsafe</span> &#123; col.get_unchecked(row).len() &#125;)</span><br><span class="line">        .max()</span><br><span class="line">        .unwrap();</span><br><span class="line">    new_num_rows += len;</span><br><span class="line">    offsets.push(new_num_rows);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>然后，我们就可以开始按行遍历所有需要 unnest 的 <code>ArrayColumn</code>。如果当前行展开后的行数不满足结果需要的行数，则补 <code>NULL</code>（向 <code>validity</code> 这个 <code>Bitmap</code> 中填充 <code>false</code>）。为了充分利用编译器的向量化优化，我们应该尽量避免出现分支语句，又由于非 <code>NULL</code> 行和 <code>NULL</code> 行都是连续的，我们可以分别计算出它们所需要的行数并依次进行数据填充，从而避免使用分支语句。</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (row, w) <span class="keyword">in</span> offsets.windows(<span class="number">2</span>).enumerate() &#123;</span><br><span class="line">    <span class="keyword">let</span> len = w[<span class="number">1</span>] - w[<span class="number">0</span>];</span><br><span class="line">    <span class="keyword">for</span> ((typ, cols), builder) <span class="keyword">in</span> unnest_columns.iter().zip(col_builders.iter_mut()) &#123;</span><br><span class="line">        <span class="keyword">let</span> inner_col = <span class="keyword">unsafe</span> &#123; cols.get_unchecked(row) &#125;;</span><br><span class="line">        <span class="keyword">let</span> inner_len = inner_col.len();</span><br><span class="line">        <span class="built_in">debug_assert!</span>(inner_len &lt;= len);</span><br><span class="line">        builder.builder.append_column(inner_col);</span><br><span class="line">        builder.validity.extend_constant(inner_len, <span class="literal">true</span>);</span><br><span class="line">        <span class="comment">// Avoid using `if branch`.</span></span><br><span class="line">        <span class="keyword">let</span> d = Scalar::default_value(typ);</span><br><span class="line">        <span class="keyword">let</span> defaults = ColumnBuilder::repeat(&amp;d.as_ref(), len - inner_len, typ).build();</span><br><span class="line">        builder.builder.append_column(&amp;defaults);</span><br><span class="line">        builder.validity.extend_constant(len - inner_len, <span class="literal">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以上便是 <code>Unnest</code> 函数执行的整个流程。</p>
+<h2 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h2><h3 id="Table-Function"><a href="#Table-Function" class="headerlink" title="Table Function"></a>Table Function</h3><p><code>Unnest</code>还能作为 table function 存在。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> <span class="built_in">unnest</span>([[<span class="number">1</span>,<span class="number">2</span>],[<span class="number">3</span>]]);</span><br><span class="line"><span class="comment">----</span></span><br><span class="line"><span class="number">1</span></span><br><span class="line"><span class="number">2</span></span><br><span class="line"><span class="number">3</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Unnest-多维（嵌套）数组"><a href="#Unnest-多维（嵌套）数组" class="headerlink" title="Unnest 多维（嵌套）数组"></a>Unnest 多维（嵌套）数组</h3><p>从上面的 SQL 例子中可以看出，Databend 对齐 PostgreSQL，会将整个嵌套数组全部展开。因此，在语义检查以及计划构建阶段，<code>Unnest</code> 表达式/计划的返回类型也应该全部展开。否则会在分布式等场景下出现 BUG（序列化与反序列化的 schema 不匹配）。</p>
+<p>相关方法：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">impl</span> Column &#123;</span><br><span class="line">    <span class="comment">/// Unnest a nested column into one column.</span></span><br><span class="line">    <span class="keyword">pub</span> <span class="function"><span class="keyword">fn</span> <span class="title">unnest</span></span>(&amp;<span class="keyword">self</span>) -&gt; <span class="keyword">Self</span> &#123;</span><br><span class="line">        <span class="keyword">match</span> <span class="keyword">self</span> &#123;</span><br><span class="line">            Column::Array(array) =&gt; array.underlying_column().unnest(),</span><br><span class="line">            col =&gt; col.clone(),</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">impl</span>&lt;T: ValueType&gt; ArrayColumn&lt;T&gt; &#123;</span><br><span class="line">    <span class="keyword">pub</span> <span class="function"><span class="keyword">fn</span> <span class="title">underlying_column</span></span>(&amp;<span class="keyword">self</span>) -&gt; T::Column &#123;</span><br><span class="line">        <span class="built_in">debug_assert!</span>(!<span class="keyword">self</span>.offsets.is_empty());</span><br><span class="line">        <span class="keyword">let</span> range = *<span class="keyword">self</span>.offsets.first().unwrap() <span class="keyword">as</span> <span class="built_in">usize</span>..*<span class="keyword">self</span>.offsets.last().unwrap() <span class="keyword">as</span> <span class="built_in">usize</span>;</span><br><span class="line">        T::slice_column(&amp;<span class="keyword">self</span>.values, range)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">impl</span> DataType &#123;</span><br><span class="line">    <span class="keyword">pub</span> <span class="function"><span class="keyword">fn</span> <span class="title">unnest</span></span>(&amp;<span class="keyword">self</span>) -&gt; <span class="keyword">Self</span> &#123;</span><br><span class="line">        <span class="keyword">match</span> <span class="keyword">self</span> &#123;</span><br><span class="line">            DataType::Array(ty) =&gt; ty.unnest(),</span><br><span class="line">            _ =&gt; <span class="keyword">self</span>.clone(),</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<div class="article-footer reveal fs14"><section id="license"><div class="header"><span>许可协议</span></div><div class="body"><p>本文采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">署名-非商业性使用-相同方式共享 4.0 国际</a> 许可协议，转载请注明出处。</p>
+</div></section></div>
+
+</article>
+
+<div class="related-wrap reveal" id="read-next"><section class="header cap theme"><span>接下来阅读</span></section><section class="body fs14"><a id="next" href="/2022-events/">2022 事件簿<span class="note">较早</span></a><div class="line"></div><a id="prev" href="/2023-07-seichijunrei/">RinChanNOW 的 2023 年 7 月圣地巡礼合集<span class="note">较新</span></a><div class="line"></div><a id="more" href="/blog/archives">检索全部文章</a></section></div>
+
+
+
+
+
+
+  <div class='related-wrap md reveal' id="comments">
+    <div class='cmt-title cap theme'>
+      快来参与讨论吧
+    </div>
+    <div class='cmt-body beaudar'>
+      
+
+<svg class="loading" style="vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2709"><path d="M832 512c0-176-144-320-320-320V128c211.2 0 384 172.8 384 384h-64zM192 512c0 176 144 320 320 320v64C300.8 896 128 723.2 128 512h64z" p-id="2710"></path></svg>
+
+<div id="beaudar" repo="RinChanNOWWW/blog-comments" issue-term="pathname" theme="preferred-color-scheme" input-position="top" comment-order="desc" loading="false" branch="main"></div>
+
+    </div>
+  </div>
+
+
+
+      
+<footer class="page-footer reveal fs12"><hr><div class="text"><p>本博客所有文章除特别声明外，均采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> 许可协议，转载请注明出处。</p>
+<p>本站由 <a href="https://github.com/RinChanNOWWW/">@RinChanNOW</a> 创建，使用 <a href="https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0" title="v1.5.0">Stellar</a> 作为主题。</p>
+</div></footer>
+
+      <div class='float-panel mobile-only blur' style='display:none'>
+  <button type='button' class='sidebar-toggle mobile' onclick='sidebar.toggle()'>
+    <svg class="icon" style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="15301"><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 2.3 26.8 24.6 47.5 51.6 47.6h416.5v4z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15302"></path><path d="M566.407 808.3c26.9-0.1 49.3-20.8 51.6-47.6-1.9-27.7-23.9-49.7-51.6-51.6h-412.6c-28.2-1.4-52.6 19.5-55.5 47.6 1.9 27.7 23.9 49.7 51.6 51.6h416.5z m309.3-249.9c26.9-0.1 49.3-20.8 51.6-47.6-2.2-26.8-24.6-47.5-51.6-47.6h-721.9c-27.7-2.8-52.5 17.4-55.3 45.1-0.1 0.8-0.1 1.7-0.2 2.5 0.9 27.2 23.6 48.5 50.7 47.6H875.707z m-103.1-245.9c26.9-0.1 49.3-20.8 51.6-47.6-0.4-28.3-23.2-51.1-51.5-51.6h-618.9c-29.5-1.1-54.3 21.9-55.5 51.4v0.2c1.4 27.8 25.2 49.2 53 47.8 0.8 0 1.7-0.1 2.5-0.2h618.8z" p-id="15303"></path></svg>
+  </button>
+</div>
+
+    </div>
+  </div>
+  <div class='scripts'>
+    <script type="text/javascript">
+  stellar = {
+    // 懒加载 css https://github.com/filamentgroup/loadCSS
+    loadCSS: (href, before, media, attributes) => {
+      var doc = window.document;
+      var ss = doc.createElement("link");
+      var ref;
+      if (before) {
+        ref = before;
+      } else {
+        var refs = (doc.body || doc.getElementsByTagName("head")[0]).childNodes;
+        ref = refs[refs.length - 1];
+      }
+      var sheets = doc.styleSheets;
+      if (attributes) {
+        for (var attributeName in attributes) {
+          if (attributes.hasOwnProperty(attributeName)) {
+            ss.setAttribute(attributeName, attributes[attributeName]);
+          }
+        }
+      }
+      ss.rel = "stylesheet";
+      ss.href = href;
+      ss.media = "only x";
+      function ready(cb) {
+        if (doc.body) {
+          return cb();
+        }
+        setTimeout(function () {
+          ready(cb);
+        });
+      }
+      ready(function () {
+        ref.parentNode.insertBefore(ss, before ? ref : ref.nextSibling);
+      });
+      var onloadcssdefined = function (cb) {
+        var resolvedHref = ss.href;
+        var i = sheets.length;
+        while (i--) {
+          if (sheets[i].href === resolvedHref) {
+            return cb();
+          }
+        }
+        setTimeout(function () {
+          onloadcssdefined(cb);
+        });
+      };
+      function loadCB() {
+        if (ss.addEventListener) {
+          ss.removeEventListener("load", loadCB);
+        }
+        ss.media = media || "all";
+      }
+      if (ss.addEventListener) {
+        ss.addEventListener("load", loadCB);
+      }
+      ss.onloadcssdefined = onloadcssdefined;
+      onloadcssdefined(loadCB);
+      return ss;
+    },
+
+    // 从 butterfly 和 volantis 获得灵感
+    loadScript: (src, opt) => new Promise((resolve, reject) => {
+      var script = document.createElement('script');
+      script.src = src;
+      if (opt) {
+        for (let key of Object.keys(opt)) {
+          script[key] = opt[key]
+        }
+      } else {
+        // 默认异步，如果需要同步，第二个参数传入 {} 即可
+        script.async = true
+      }
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    }),
+
+    // https://github.com/jerryc127/hexo-theme-butterfly
+    jQuery: (fn) => {
+      if (typeof jQuery === 'undefined') {
+        stellar.loadScript(stellar.plugins.jQuery).then(fn)
+      } else {
+        fn()
+      }
+    }
+  };
+  stellar.github = 'https://github.com/xaoxuu/hexo-theme-stellar/tree/1.5.0';
+  stellar.config = {
+    date_suffix: {
+      just: '刚刚',
+      min: '分钟前',
+      hour: '小时前',
+      day: '天前',
+      month: '个月前',
+    },
+  };
+
+  // required plugins (only load if needs)
+  stellar.plugins = {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js',
+    sitesjs: '/js/plugins/sites.js',
+    friendsjs: '/js/plugins/friends.js',
+  };
+
+  // optional plugins
+  if ('true' == 'true') {
+    stellar.plugins.lazyload = Object.assign({"enable":true,"js":"https://cdn.jsdelivr.net/npm/vanilla-lazyload@17.3.1/dist/lazyload.min.js","transition":"blur"});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.swiper = Object.assign({"enable":true,"css":"https://unpkg.com/swiper/swiper-bundle.min.css","js":"https://unpkg.com/swiper/swiper-bundle.min.js"});
+  }
+  if ('' == 'true') {
+    stellar.plugins.scrollreveal = Object.assign({"enable":null,"js":"https://cdn.jsdelivr.net/npm/scrollreveal@4.0.9/dist/scrollreveal.min.js","distance":"8px","duration":500,"interval":100,"scale":1});
+  }
+  if ('true' == 'true') {
+    stellar.plugins.preload = Object.assign({"enable":true,"service":"flying_pages","instant_page":"https://cdn.jsdelivr.net/gh/volantis-x/cdn-volantis@4.1.2/js/instant_page.js","flying_pages":"https://cdn.jsdelivr.net/gh/gijo-varghese/flying-pages@2.1.2/flying-pages.min.js"});
+  }
+</script>
+
+<!-- required -->
+
+  
+<script src="/js/main.js" async></script>
+
+
+
+<!-- optional -->
+
+  <script>
+  function loadBeaudar() {
+    const els = document.querySelectorAll("#comments #beaudar");
+    if (els.length === 0) return;
+    els.forEach((el, i) => {
+      try {
+        el.innerHTML = '';
+      } catch (error) {
+        console.log(error);
+      }
+      var script = document.createElement('script');
+      script.src = 'https://beaudar.lipk.org/client.js';
+      script.async = true;
+      for (let key of Object.keys(el.attributes)) {
+        let attr = el.attributes[key];
+        if (['class', 'id'].includes(attr.name) === false) {
+          script.setAttribute(attr.name, attr.value);
+        }
+      }
+      el.appendChild(script);
+    });
+  }
+  window.addEventListener('DOMContentLoaded', (event) => {
+      loadBeaudar();
+  });
+</script>
+
+
+
+
+<!-- inject -->
+
+
+  </div>
+</body>
+</html>
