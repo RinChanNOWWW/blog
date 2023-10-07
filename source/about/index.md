@@ -5,10 +5,16 @@ title: 关于我
 
 {% about %}
 
-I'm RinChanNOW。一个术术人、游戏玩家。PC 与 PS4 游戏均有涉猎，最近沉迷音乐游戏。主要游玩初音未来歌姬计划与 SOUNDVOLTEX，不过两者都技艺不精。
-歌姬计划（AFT、FTDX）：只能 PERFECT 部分 8 星曲目，9 星苦手，10 星根本不敢碰。
-SDVX：
-<img height="32px" alt="vf" src="https://www.rinchannow.xyz/images/course.png" align="left"><img height="32px" alt="vf" src="https://www.rinchannow.xyz/images/vf.png" align="left"> (TODO: 在线生成这两个图标)
+Hello, I'm [RinChanNOW](https://www.bilibili.com/video/BV1Vx411w7ub)，一个随处可见的喜爱 ACG 的网上冲浪人。
+
+- 关于 A 与 C：https://bgm.tv/user/rinchannow
+- 关于 G：
+    - 沉迷街机音游中……（但是打不动高难度歌只有天天下埋儿歌）
+        - Sound Voltex: VF 18.58 缓慢上升中。
+        - maimaiDX：Rating 14400 缓慢上升中。
+    - 日常清 バンドリ 体力（没错就是 MyGO 拉我回坑的）。
+    - 偶尔玩玩 PS5（PSN：RinChanNOW__）。
+    - 现在很少碰 PC 端游戏,基本不玩手游。
 
 {% navbar [文章](/) [GitHub](https://github.com/RinChanNOWWW) [友链](/friends/) %}
 
