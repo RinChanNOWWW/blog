@@ -134,9 +134,9 @@
 <h3 id="性能对比"><a href="#性能对比" class="headerlink" title="性能对比"></a>性能对比</h3><p>测试机器相关信息：</p>
 <ul>
 <li>OS: Ubuntu 18.04 LTS (Bionic Beaver)</li>
-<li>Disk: 885G / 1.9T (50%)</li>
+<li>Disk: 885G &#x2F; 1.9T (50%)</li>
 <li>CPU: Intel Xeon Gold 5218R @ 80x 2.924GHz [46.0°C]</li>
-<li>RAM: 8993MiB / 95152MiB</li>
+<li>RAM: 8993MiB &#x2F; 95152MiB</li>
 </ul>
 <p>这里进行了一个简单的性能对比。使用的数据集是 <a href="https://github.com/datafuselabs/databend/blob/main/tests/logictest/suites/ydb/select1-1.test">https://github.com/datafuselabs/databend/blob/main/tests/logictest/suites/ydb/select1-1.test</a> 这里面的插入数据。我将这些数据每五个作为一次插入，并重复插入直至 21828 条数据。这里是为了保证有一定的数据量，并且数据能够打散在不同的 <code>Partition</code> 中。这里使用的 SQL 语句为:</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> t1 <span class="keyword">where</span> a <span class="operator">&lt;</span> <span class="number">174</span> <span class="keyword">and</span> b <span class="operator">&lt;</span> <span class="number">130</span>;</span><br></pre></td></tr></table></figure>
