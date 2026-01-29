@@ -10,4 +10,4 @@
 
 ## New post
 
-`hexo new <article name`
+`hexo new <article name>`
